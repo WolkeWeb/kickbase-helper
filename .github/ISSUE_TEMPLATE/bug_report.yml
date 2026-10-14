@@ -1,0 +1,79 @@
+name: Fehler melden / Bug report
+description: Etwas funktioniert nicht wie erwartet. / Something does not work as expected.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Danke für die Meldung! Bitte **keine** Zugangsdaten, `.env`-Inhalte, Tokens, Datenbank-Dumps,
+        Live-Screenshots oder Namen anderer Liga-Manager einfügen. Sicherheitslücken bitte privat melden
+        (siehe `SECURITY.md`).
+
+        *Thanks for reporting! Please do **not** include credentials, `.env` contents, tokens, database dumps,
+        live screenshots or other managers' names. Report security issues privately (see `SECURITY.md`).*
+  - type: textarea
+    id: description
+    attributes:
+      label: Beschreibung / Description
+      description: Was ist passiert? / What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Schritte zum Nachstellen / Steps to reproduce
+      placeholder: |
+        1. Seite „Markt“ öffnen
+        2. …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Erwartetes Verhalten / Expected behavior
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Bereich / Area
+      options:
+        - Weboberfläche / Web UI
+        - Worker / Datenabruf (Kickbase, LigaInsider, kicker, OpenLigaDB)
+        - Empfehlungen / Scores
+        - Telegram-Bot
+        - KI / Mistral
+        - Installation / Docker / Proxy
+        - Sonstiges / Other
+    validations:
+      required: true
+  - type: dropdown
+    id: setup
+    attributes:
+      label: Betriebsart / Deployment mode
+      options:
+        - Lokal (compose.local.yaml)
+        - HTTPS mit Caddy (compose.https.yaml)
+        - Eigener Proxy (compose.external.yaml)
+        - IONOS (compose.ionos.yaml)
+        - Entwicklung ohne Docker / Development without Docker
+  - type: input
+    id: version
+    attributes:
+      label: Version / Commit
+      description: z. B. Commit-Hash von `main` / e.g. commit hash of `main`
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: |
+        Relevanter Auszug aus `docker compose logs app worker` – vorher auf private Daten prüfen.
+        Relevant excerpt – check for private data first.
+      render: text
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Datenschutz / Privacy
+      options:
+        - label: Ich habe keine Secrets, Tokens oder Namen anderer Manager eingefügt. / I did not include secrets, tokens or other managers' names.
+          required: true
