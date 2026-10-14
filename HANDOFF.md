@@ -1,6 +1,6 @@
 # HANDOFF.md
 
-Aktiver Agent: Codex (anbieterunabhängige Einrichtung; allein)
+Aktiver Agent: keiner (anbieterunabhängige Einrichtung abgeschlossen)
 
 ## Ziel und Stand
 
@@ -9,11 +9,10 @@ Phasen 1–7b und die Erweiterungen bis C20 sind umgesetzt; Details in `docs/roa
 
 ## Aktueller Stand
 
-- Anbieterneutraler Betrieb: Kern plus vier Zugriffsvarianten; Docker-Setup-Assistent
-  ohne Secret-Ausgabe, konfigurierbare Pfade/UID/GID und generische Offline-Hinweise.
-  1369 Tests grün (1 Skip), neue Installation inkl. Anmeldung sowie alle Compose-Modi
-  geprüft. Bestehende IONOS-Konfiguration lokal übernommen, Ports/Volumes/Mounts exakt
-  verglichen; eigenständiger PR, danach CI und Deployment.
+- Anbieterneutraler Betrieb: vier Zugriffsvarianten, Docker-Setup ohne Secret-Ausgabe,
+  konfigurierbare Pfade/UID/GID und generische Offline-Hinweise. 1369 Tests grün (1 Skip),
+  Erststart inkl. Login und alle Compose-Modi geprüft; PR #5 nach grüner CI gemergt/deployt.
+  Bestehendes IONOS/VPN mit identischen Secret-Mounts/Volumes/Ports; App-/DB-Health ok.
 
 - Veröffentlichung 14.10.2026: neutrale Beispielkonfiguration, Caddy über `PUBLIC_URL`,
   keine Live-Screenshots und keine vollständigen gescrapten Webseiten im Git-Stand.
