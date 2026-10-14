@@ -66,8 +66,6 @@ Die bestehende Anwendung und ihre Datenbank werden durch den Repo-Wechsel nicht 
 Der Audit ist eine zeitpunktbezogene Prüfung, keine Garantie gegen jede Art sensibler
 Information. Der private Altbestand bleibt deshalb privat.
 
-test
-
 ## GitHub-Schutz
 
 `main` erfordert einen PR und die erfolgreichen Checks `Lint & Tests` sowie
