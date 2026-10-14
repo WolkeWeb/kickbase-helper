@@ -6,7 +6,7 @@ Branch → PR → Review → Merge → Deploy.
 
 **Erledigt:** KI-Grundlage (Mistral), Phasen 6a/6b/7/7b, Review-Korrekturen A und UI B,
 C1 Merkliste, C2 Angebote auf eigene Spieler, C3 Spieltags-Bilanz, C4 Aufstellungsindex und
-Audit/UI D vom 13.10.2026. Befunde: [`audit-2026-10-13.md`](audit-2026-10-13.md).
+Audit/UI D vom 13.10.2026. Befunde: [`maintainer/audit-2026-10-13.md`](maintainer/audit-2026-10-13.md).
 
 **Offen:** Phase 8 bleibt bis zum erfolgreichen Backtest gesperrt. C6/Phase 9 Wettquoten
 bleibt geparkt, bis eine Quelle ohne Account gefunden ist. Neue Vorschläge C12–C16 stehen
@@ -23,7 +23,7 @@ unten; die Erweiterung des Plans ist beauftragt, ihre Implementierung ist ein Fo
   gab in der Gratis-Stufe nur 429. Bedarf ~0,15 $/Monat. Keine kostenpflichtigen Tool-APIs von
   Mistral (z. B. Websuche); Daten sammelt der Worker. Seit PR #62 (13.10.2026) gibt es
   zusätzlich die optionale Claude-Bridge für Telegram mit lesenden MCP-Werkzeugen und
-  Websuche; Einrichtung und Grenzen stehen in `docs/deployment.md` und `config/ai.yaml`.
+  Websuche; Einrichtung und Grenzen stehen in `docs/maintainer/deployment.md` und `config/ai.yaml`.
 - **Scraping ist erlaubt** (privates Projekt), mit den Schonregeln aus der CLAUDE.md
   (≤ 1 Request / 2 s pro Domain, Cache, feste Zeitfenster, HTML-Fixtures in Tests, Ausfälle
   sichtbar machen).
@@ -282,7 +282,7 @@ Erkundungen; offene Punkte dort im Abschnitt „Offene Probleme".
 Trading-Block: Tagesbewegung und Gewinn seit Kauf, eigenes Zeitfenster bis zur echten Deadline,
 Budget nach allen Geboten, Finanzierung zu heutigen Marktwerten mit Schutz der vorgeschlagenen
 Elf. Trading-Käufe berücksichtigen Aufschlag, verlässliches Angebotsende und verbleibende Updates;
-Gewinnrechnung ist nur ein Szenario. Details und Quellen in `iphone-product-review-2026-10-13.md`.
+Gewinnrechnung ist nur ein Szenario. Details und Quellen in `maintainer/iphone-product-review-2026-10-13.md`.
 
 Umgesetzt: Nachrichten mit Originalartikeln auch ohne KI und besserem
 Deadline-Takt; mobile Informationshierarchie straffen; eigene Spieltagspunkte mit 10-min-Cache,

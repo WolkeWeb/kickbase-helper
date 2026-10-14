@@ -1,0 +1,12 @@
+# Optional and experimental: Claude im Telegram-Chat via the host-side bridge
+# (deploy/claude-bridge/, setup in docs/maintainer/deployment.md). Add to COMPOSE_FILE, e.g.
+#   COMPOSE_FILE=compose.yaml:compose.local.yaml:compose.claude.yaml
+# The bridge calls the Claude Code CLI on the host; check that your Claude plan allows this use.
+services:
+  worker:
+    # The worker reaches the bridge on the host, and the Claude CLI there reads the read-only
+    # Kickbase tools from the worker (token-protected MCP) – published on loopback only.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "127.0.0.1:${CLAUDE_MCP_PORT:-8768}:${CLAUDE_MCP_PORT:-8768}"

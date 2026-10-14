@@ -17,6 +17,12 @@
   Single-User, läuft als Docker-Stack im Homelab und greift <b>nur lesend</b> auf Kickbase zu.
 </p>
 
+> [!IMPORTANT]
+> **Inoffizielles Community-Projekt** ohne Verbindung zu Kickbase, LigaInsider oder kicker.
+> Es nutzt eine nicht dokumentierte Kickbase-API. Automatisierter Zugriff kann gegen die
+> Nutzungsbedingungen von Kickbase verstoßen und im Extremfall zur Sperrung des Accounts
+> führen. Nutzung auf eigenes Risiko und ohne Gewähr (siehe [Lizenz](LICENSE)).
+
 ---
 
 ## Inhalt
@@ -124,7 +130,9 @@ Für Server/Handy/PWA den passenden Zugriff in `.env` wählen:
 | IONOS DNS-01 | `compose.ionos.yaml` | optionales IONOS-Token; auch für rein interne Hosts |
 
 **[Einrichtung, Varianten und Übernahme vorhandener Installationen](docs/self-hosting.md)**.
-Telegram, KI und Claude-Bridge bleiben optional; ohne ihre Keys läuft das Dashboard weiter.
+Telegram und KI bleiben optional; ohne ihre Keys läuft das Dashboard weiter. Die
+**experimentelle** Claude-Bridge (`compose.claude.yaml`) nutzt die Claude Code CLI des Hosts –
+ob das mit dem eigenen Claude-Tarif vereinbar ist, bitte selbst prüfen.
 
 ## Konfiguration
 
@@ -152,6 +160,7 @@ uv run alembic upgrade head               # Migrationen
   Ausgabe lokal unter `artifacts/screenshots/` (gitignored).
 - Arbeitsweise, Regeln und Übergaben zwischen Agenten: [`AGENTS.md`](AGENTS.md),
   aktueller Stand in [`HANDOFF.md`](HANDOFF.md), Ausbauplan in [`docs/roadmap.md`](docs/roadmap.md).
+  Was davon nur zum Ablauf des Maintainers gehört: [`docs/maintainer/`](docs/maintainer/README.md).
 
 ```
 app/
@@ -177,9 +186,9 @@ Drittanbieter-Webseiten in öffentliche Issues, PRs oder Screenshots übernehmen
 Quelle aus oder ändert sich eine Seite, zeigt die App das sichtbar an, statt alte Daten
 als aktuell auszugeben.
 
----
-
-<sub>Inoffizielles Community-Projekt ohne Verbindung zu Kickbase.</sub>
+Wer das Projekt selbst betreibt, ruft diese Dienste mit der eigenen Installation ab und ist
+selbst dafür verantwortlich, deren Nutzungsbedingungen einzuhalten. Die eingebauten Grenzen
+(Abstände, Zeitfenster, Caches) bitte nicht lockern.
 
 ## Sicherheit und Drittanbieter
 

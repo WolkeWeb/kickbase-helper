@@ -1,5 +1,8 @@
 # Kickbase-Helper – Projektregeln (AGENTS.md)
 
+> Steuert die KI-Agenten des Maintainers. Pfade wie `/opt/kickbase-helper/secrets/` und der User
+> `claude` beziehen sich auf die Maintainer-VM; Überblick: `docs/maintainer/README.md`.
+
 Privates, mobil-first Dashboard für einen Kickbase-Account: Aufstellung, Kader, Budget,
 Marktwert-Trends, Spielerform und nachvollziehbare Kauf-/Verkaufsempfehlungen. Single-User,
 läuft als Docker-Stack im Homelab. Kickbase-Zugriff **nur lesend**.
@@ -86,7 +89,7 @@ fehlende Tools werden selbst installiert.
   lesend) → Findings beheben → auf die CI warten und erst bei Grün mergen:
   `sleep 20 && gh pr checks --watch --interval 30 --fail-fast && gh pr merge --squash --delete-branch`
   (alle ausgelösten Checks abwarten; das `&&` verhindert einen Merge bei roter CI) → deployen
-  (`docs/deployment.md`) → kurz prüfen.
+  (`docs/maintainer/deployment.md`) → kurz prüfen.
 - PR-Beschreibung: Was, warum, wie getestet, Screenshots bei UI.
 - Kleine, fokussierte Commits. Für breite Code-Suchen Subagents nutzen.
 - Bei Unklarheiten zur API: `scripts/spec.py`, dann ggf. ein einzelner Probe-Request – keine
@@ -122,7 +125,7 @@ Der Review-Subagent `review` (`.opencode/agents/review.md`) nutzt `opencode-go/k
 und ist strikt nur lesend (kein `edit`, `bash` nur für `scripts/spec.py`).
 
 **Aufträge (Standardweg):** `/auftrag <Aufgabe>` in Claude Code – auch vom Handy über Remote
-Control (Einrichtung in `docs/deployment.md`). Claude (Sonnet) plant die Checkboxen, startet pro
+Control (Einrichtung in `docs/maintainer/deployment.md`). Claude (Sonnet) plant die Checkboxen, startet pro
 Schritt opencode (MiniMax M3), prüft Commit und Tests und erledigt PR, Review (über opencode),
 Merge und Deploy. Ohne Argument macht es mit den offenen Checkboxen weiter. Ablauf und
 Sparregeln: `.claude/commands/auftrag.md`.
@@ -175,7 +178,7 @@ uv run alembic upgrade head         # Migrationen
 
 ## Deployment
 
-Nach jedem Merge (einmal pro Block) auf der VM – Befehle und Details in `docs/deployment.md`.
+Nach jedem Merge (einmal pro Block) auf der VM – Befehle und Details in `docs/maintainer/deployment.md`.
 Immer gültig:
 
 - Portainer sieht den Stack nur zur Übersicht – dort nichts ändern.

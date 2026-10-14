@@ -115,7 +115,7 @@ Erreichbarkeit von Standard-Port 80/443 in der Standard-HTTPS-Variante.
 | `./secrets/kickbase_password` | Kickbase-Passwort |
 | `./secrets/telegram_bot_token` | optional: Telegram; zusätzlich `TELEGRAM_CHAT_ID` in `.env` |
 | `./secrets/llm_api_key` | optional: OpenAI-kompatibler KI-Anbieter; URL/Modell in `.env` |
-| `./secrets/claude_bridge_token` | optional: Claude-Bridge; Einrichtung in `deployment.md` |
+| `./secrets/claude_bridge_token` | optional, experimentell: Claude-Bridge (zusätzlich `compose.claude.yaml` in `COMPOSE_FILE`); Einrichtung in [`maintainer/deployment.md`](maintainer/deployment.md) |
 | `./secrets/ionos_token` | nur bei gewähltem IONOS-Modus |
 
 Der Assistent legt die drei optionalen Basis-Dateien leer an. Leere Dateien schalten
@@ -143,7 +143,7 @@ IONOS_TOKEN_FILE=/opt/kickbase-helper/secrets/ionos_token
 `pgdata`, `caddy_data` und `caddy_config` bleiben gleich; bestehende Daten und
 Zertifikate werden weiterverwendet. WireGuard, DNS-Umschreibungen und Firewall bleiben
 Teil der lokalen Infrastruktur. Nach erfolgreicher Konfigurationsprüfung ohne Ausgabe
-`docker compose config --quiet` gezielt deployen; siehe [Deployment](deployment.md).
+`docker compose config --quiet` gezielt deployen; siehe [Deployment](maintainer/deployment.md).
 
 ## Prüfen und aktualisieren
 

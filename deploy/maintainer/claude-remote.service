@@ -1,6 +1,6 @@
-# Claude Code Remote Control für kickbase-helper – Aufträge vom Handy (siehe docs/deployment.md).
+# Claude Code Remote Control für kickbase-helper – Aufträge vom Handy (siehe docs/maintainer/deployment.md).
 # Installation (einmalig):
-#   sudo cp deploy/claude-remote.service /etc/systemd/system/
+#   sudo cp deploy/maintainer/claude-remote.service /etc/systemd/system/
 #   sudo systemctl daemon-reload && sudo systemctl enable --now claude-remote
 # Status/Logs:  systemctl status claude-remote   ·   journalctl -u claude-remote -f
 [Unit]

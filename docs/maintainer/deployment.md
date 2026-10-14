@@ -1,6 +1,9 @@
 # Deployment
 
-Erste Einrichtung und Wahl des Zugriffs: [Self-Hosting](self-hosting.md).
+> Betriebsnotizen des Maintainers (Updates, Remote Control, Claude-Bridge). Für eine eigene
+> Installation reicht [Self-Hosting](../self-hosting.md); Pfade und User hier sind Beispiele.
+
+Erste Einrichtung und Wahl des Zugriffs: [Self-Hosting](../self-hosting.md).
 `COMPOSE_FILE` in `.env` legt lokal, Standard-HTTPS, eigenen Proxy oder IONOS fest.
 
 Ausgelagert aus `AGENTS.md`, damit die Details nur geladen werden, wenn wirklich deployt wird.
@@ -55,7 +58,7 @@ bestehen. Keine Produktions-Downgrades zum Löschen von Präferenzen.
 Die ursprüngliche Installation nutzt `compose.ionos.yaml`, eigene Secret-Pfade unter
 `/opt/kickbase-helper/secrets/`, interne DNS-Auflösung und WireGuard. Diese Infrastruktur
 ist keine Voraussetzung für andere Installationen. Übernahme ohne Änderung der Secrets
-oder Volumes: [Migrationsanleitung](self-hosting.md#bestehende-ionos-installation-übernehmen).
+oder Volumes: [Migrationsanleitung](../self-hosting.md#bestehende-ionos-installation-übernehmen).
 
 - IONOS-Proxy mit DNS-01 veröffentlicht wie bisher ausschließlich 443/TCP und 443/UDP.
 - DNS/Firewall/VPN legen fest, von wo die Installation erreichbar ist.
@@ -71,7 +74,7 @@ docker compose up -d --no-deps --build proxy
 ## Aufträge vom Handy (Claude Code Remote Control)
 
 Optional kann `claude remote-control` als systemd-Dienst laufen
-(`deploy/claude-remote.service`). In der Claude-App bzw. auf claude.ai/code erscheint die Umgebung
+(`deploy/maintainer/claude-remote.service`). In der Claude-App bzw. auf claude.ai/code erscheint die Umgebung
 „Kickbase-Helper“; dort eine Session öffnen und z. B. `/auftrag C2 Angebote auf eigene Spieler`
 schreiben. Rückfragen und Freigaben kommen im Chat.
 
@@ -88,7 +91,7 @@ cd ~/kickbase-helper
 which claude opencode uv gh                  # alle vier müssen gefunden werden
 claude remote-control                         # einmal interaktiv: „Enable Remote Control?“ und
                                               # „Trust …?“ mit y bestätigen, dann Strg+C
-sudo cp deploy/claude-remote.service /etc/systemd/system/
+sudo cp deploy/maintainer/claude-remote.service /etc/systemd/system/
 sudo systemctl daemon-reload && sudo systemctl enable --now claude-remote
 systemctl status claude-remote --no-pager    # läuft? Logs: journalctl -u claude-remote -f
 ```
@@ -113,15 +116,23 @@ Ablauf: Worker → `deploy/claude-bridge/bridge.py` auf dem Host (`172.17.0.1:87
 lesenden Kickbase-Werkzeuge des Workers (MCP auf `127.0.0.1:8768`, gleicher Token) – keine
 Shell, keine Dateien, keine Projekt-Einstellungen. Ist die Bridge weg, antwortet Mistral.
 
+> **Experimentell.** Die Bridge ruft die Claude Code CLI mit dem Abo-Login des Hosts auf. Ob
+> diese automatisierte Nutzung durch einen Bot mit dem eigenen Claude-Tarif vereinbar ist, muss
+> jeder Betreiber selbst anhand der Anthropic-Bedingungen prüfen. Für das Dashboard wird die
+> Bridge nicht benötigt; ohne sie antwortet Mistral bzw. läuft alles ohne KI.
+
 Einmalig einrichten (als User `claude`, Claude Code ist per `/login` angemeldet):
 
 ```bash
 cd ~/kickbase-helper && git checkout main && git pull
+# compose.claude.yaml an COMPOSE_FILE in .env anhängen (Worker-Port 8768 + Host-Zugriff), z. B.
+#   COMPOSE_FILE=compose.yaml:compose.local.yaml:compose.claude.yaml
 openssl rand -hex 32 > secrets/claude_bridge_token && chmod 600 secrets/claude_bridge_token
 sudo install -D -m 755 deploy/claude-bridge/bridge.py /usr/local/lib/kickbase-claude-bridge/bridge.py
 sudo cp deploy/claude-bridge/kickbase-claude-bridge.service /etc/systemd/system/
 sudo systemctl daemon-reload && sudo systemctl enable --now kickbase-claude-bridge
 docker compose up -d --build worker
+docker compose port worker 8768                         # 127.0.0.1:8768
 curl -fsS http://172.17.0.1:8767/health                 # {"ok": true, "available": true}
 docker compose logs worker | grep -i claude              # "Claude im Chat an"
 ```

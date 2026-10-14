@@ -9,6 +9,10 @@ Phasen 1–7b und die Erweiterungen bis C20 sind umgesetzt; Details in `docs/roa
 
 ## Aktueller Stand
 
+- Öffentlicher Betrieb: README-Hinweis (inoffiziell, Sperrrisiko, ohne Gewähr, Drittanbieter-
+  Bedingungen); Worker-Port 8768 + `host.docker.internal` nur noch über `compose.claude.yaml`
+  (experimentell, in `check_deployment.py` geprüft). Maintainer-Dateien unter `docs/maintainer/`
+  und `deploy/maintainer/`, Übersicht in `docs/maintainer/README.md`.
 - Community-Dateien: `LICENSE` (MIT), `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md` (Deutsch mit
   englischer Kurzfassung), Issue-Formulare unter `.github/ISSUE_TEMPLATE/` (Blanko-Issues aus,
   Sicherheitsmeldungen verweisen auf private Advisories). README/publication.md angepasst.

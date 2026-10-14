@@ -90,7 +90,10 @@ async def maybe_handle(ctx, text: str, now: datetime | None = None) -> Handled |
             await ctx.kv.set(STATE_KEY, None)
             return None
         return Handled(
-            ["Claude ist nicht eingerichtet (Bridge-Token fehlt, siehe docs/deployment.md)."]
+            [
+                "Claude ist nicht eingerichtet "
+                "(Bridge-Token fehlt, siehe docs/maintainer/deployment.md)."
+            ]
         )
     cfg = load_ai_config().claude
     question = start.group(1).strip() if start else text
