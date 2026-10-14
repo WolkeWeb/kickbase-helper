@@ -1,6 +1,6 @@
 # HANDOFF.md
 
-Aktiver Agent: keiner (anbieterunabhängige Einrichtung abgeschlossen)
+Aktiver Agent: keiner (Systemprüfung nach den letzten Patches abgeschlossen)
 
 ## Ziel und Stand
 
@@ -9,6 +9,10 @@ Phasen 1–7b und die Erweiterungen bis C20 sind umgesetzt; Details in `docs/roa
 
 ## Aktueller Stand
 
+- Systemprüfung: lokales `COMPOSE_FILE` um `compose.claude.yaml` ergänzt; Bridge/MCP
+  wieder beidseitig erreichbar, HTTPS und letzte Worker-Jobs ok, DB auf 0015.
+  Setup weist mehrdeutige Backslashes vor Dateierzeugung ab; Update-Doku ergänzt.
+  1372 Tests grün (1 Skip), SQLite + isoliertes PostgreSQL, Ruff und Image-Erststart ok.
 - Öffentlicher Betrieb: README-Hinweis (inoffiziell, Sperrrisiko, ohne Gewähr, Drittanbieter-
   Bedingungen); Worker-Port 8768 + `host.docker.internal` nur noch über `compose.claude.yaml`
   (experimentell, in `check_deployment.py` geprüft). Maintainer-Dateien unter `docs/maintainer/`
@@ -24,15 +28,13 @@ Phasen 1–7b und die Erweiterungen bis C20 sind umgesetzt; Details in `docs/roa
 - Veröffentlichung 14.10.2026: neutrale Beispielkonfiguration, Caddy über `PUBLIC_URL`,
   keine Live-Screenshots und keine vollständigen gescrapten Webseiten im Git-Stand.
   Drittanbieter-Lizenzen und `SECURITY.md` ergänzt; Artefaktpfade werden in CI gesperrt.
-- Audit und Begründung des neuen Git-Verlaufs: `docs/publication.md`.
+  Audit und Begründung des neuen Git-Verlaufs: `docs/publication.md`.
   Die alte Entwicklung samt PRs, Logs und Quoten-Branch bleibt im privaten Archiv.
-- Lokal: 1360 Tests erfolgreich, 1 Skip; SQLite und isoliertes PostgreSQL.
-  Ruff, actionlint, zizmor, Secret-Scan ohne Ausnahmen und Caddy-Hostprüfung grün.
-  CI und Proxy-Image der neuen Historie erfolgreich; öffentlich unter der bisherigen URL.
-  Das Altarchiv ist privat/archiviert. `main`: Pflicht-CI, PRs und kein Force-Push;
-  GitHub Secret-Scanning, Push-Schutz und private Sicherheitsmeldungen aktiviert.
 
 ## Plan
+
+- [x] Letzte Patches und VM-Betrieb prüfen: bestehende Claude-Bridge wieder anbinden,
+  Setup-Sonderzeichen absichern und Update-Anweisungen korrigieren.
 
 - [x] L1 Anbieterneutraler Compose-Kern; lokale Einrichtung, Standard-HTTPS und externer
   Proxy sowie IONOS als Option. Sichere Setup-Hilfe, Tests/CI, PR und Release.

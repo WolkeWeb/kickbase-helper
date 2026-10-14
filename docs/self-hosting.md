@@ -120,7 +120,9 @@ Erreichbarkeit von Standard-Port 80/443 in der Standard-HTTPS-Variante.
 
 Der Assistent legt die drei optionalen Basis-Dateien leer an. Leere Dateien schalten
 diese Funktionen ab. Die IONOS-Datei wird für den normalen Start nicht angelegt und
-nicht benötigt. Nach einer Änderung `docker compose up -d` ausführen.
+nicht benötigt. Nach einer Änderung der Secret-Dateien
+`docker compose up -d --force-recreate app worker` ausführen: die Clients lesen Tokens
+beim Start, und ersetzte Dateien müssen neu in die Container eingebunden werden.
 
 `KICKBASE_EMAIL_FILE` und `KICKBASE_PASSWORD_FILE` erlauben andere Secret-Pfade,
 auch außerhalb des Repos. `APP_UID`/`APP_GID` müssen die Dateien im Container lesen
@@ -138,6 +140,12 @@ KICKBASE_EMAIL_FILE=/opt/kickbase-helper/secrets/kickbase_email
 KICKBASE_PASSWORD_FILE=/opt/kickbase-helper/secrets/kickbase_password
 IONOS_TOKEN_FILE=/opt/kickbase-helper/secrets/ionos_token
 ```
+
+Bei einer bereits eingerichteten Claude-Bridge zusätzlich `:compose.claude.yaml` an
+`COMPOSE_FILE` anhängen, also `compose.yaml:compose.ionos.yaml:compose.claude.yaml`.
+Seit der Auslagerung des optionalen Overlays veröffentlicht der Kern den lokalen
+MCP-Port nicht mehr; ohne die Ergänzung kann die Bridge die Kickbase-Werkzeuge nicht
+erreichen. Danach den Worker mit `docker compose up -d --no-deps worker` erneuern.
 
 `PUBLIC_URL`, Login-/Session-/DB-Werte und optionale Tokens behalten. Stack-Name sowie
 `pgdata`, `caddy_data` und `caddy_config` bleiben gleich; bestehende Daten und
