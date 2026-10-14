@@ -1,5 +1,8 @@
 # Deployment
 
+Erste Einrichtung und Wahl des Zugriffs: [Self-Hosting](self-hosting.md).
+`COMPOSE_FILE` in `.env` legt lokal, Standard-HTTPS, eigenen Proxy oder IONOS fest.
+
 Ausgelagert aus `AGENTS.md`, damit die Details nur geladen werden, wenn wirklich deployt wird.
 Die immer gültigen Regeln (Portainer, Secrets in `docker compose config`, Migrationen) stehen
 weiter in `AGENTS.md`.
@@ -13,11 +16,13 @@ for f in telegram_bot_token llm_api_key claude_bridge_token; do
   test -e secrets/$f || install -m 600 /dev/null secrets/$f
 done
 docker compose up -d --build app worker
-docker compose ps && curl -fsS https://kickbase.example.com/health
+docker compose ps
+# /health an der eigenen PUBLIC_URL prüfen (lokal: http://localhost:8080/health)
 ```
 
-Bei reinen App-/Worker-Änderungen gezielt diese beiden Dienste bauen. Den Proxy separat nur
-bei Änderungen an seinem Dockerfile/Caddyfile bauen; ein ungebundener neuer Caddy-Builder
+Bei reinen App-/Worker-Änderungen gezielt diese beiden Dienste bauen. Den optionalen
+IONOS-Proxy separat nur bei Änderungen an seinem Dockerfile/Caddyfile.ionos bauen;
+ein ungebundener neuer Caddy-Builder
 kann mehrere GB für Go-Abhängigkeiten und Compiler benötigen. Am 14.10.2026 musste der
 Build auf dem 19-GB-Root-Dateisystem abbrechen. Reproduzierbaren Build-Cache bereinigen
 (`docker builder prune --force`) ist eine mögliche Entlastung; keine Volumes löschen.
@@ -45,17 +50,27 @@ Diesen Befehl als App-Command im lokalen Compose-Override für das vorherige Ima
 Der zurückgesetzte Worker verwendet seine bisherigen Tabellen; die neue Tabelle bleibt
 bestehen. Keine Produktions-Downgrades zum Löschen von Präferenzen.
 
-- Erreichbar **nur intern über WireGuard** unter `https://kickbase.example.com`, kein Port
-  nach außen.
-- TLS über Caddy mit Let's-Encrypt-DNS-01 bei IONOS; der Name existiert nur intern
-  (AdGuard-Umschreibung). Caddy braucht das Modul `caddy-dns/ionos` (eigenes Image). Nur Caddy
-  veröffentlicht Port 443.
-- Die App hat trotzdem einen eigenen Login (Single-User, Passwort-Hash aus `.env`,
-  Session-Cookie httpOnly + Secure + SameSite=Lax).
+## Lokale Betriebsvariante: IONOS + VPN (optional)
+
+Die ursprüngliche Installation nutzt `compose.ionos.yaml`, eigene Secret-Pfade unter
+`/opt/kickbase-helper/secrets/`, interne DNS-Auflösung und WireGuard. Diese Infrastruktur
+ist keine Voraussetzung für andere Installationen. Übernahme ohne Änderung der Secrets
+oder Volumes: [Migrationsanleitung](self-hosting.md#bestehende-ionos-installation-übernehmen).
+
+- IONOS-Proxy mit DNS-01 veröffentlicht wie bisher ausschließlich 443/TCP und 443/UDP.
+- DNS/Firewall/VPN legen fest, von wo die Installation erreichbar ist.
+- App-Login und Secure-Session-Cookies bleiben für alle TLS-Varianten aktiv.
+
+```bash
+docker compose config --quiet
+docker compose up -d --build app worker
+# Nur bei Änderung des optionalen IONOS-Proxys:
+docker compose up -d --no-deps --build proxy
+```
 
 ## Aufträge vom Handy (Claude Code Remote Control)
 
-Auf der VM läuft dauerhaft `claude remote-control` als systemd-Dienst
+Optional kann `claude remote-control` als systemd-Dienst laufen
 (`deploy/claude-remote.service`). In der Claude-App bzw. auf claude.ai/code erscheint die Umgebung
 „Kickbase-Helper“; dort eine Session öffnen und z. B. `/auftrag C2 Angebote auf eigene Spieler`
 schreiben. Rückfragen und Freigaben kommen im Chat.
@@ -63,7 +78,10 @@ schreiben. Rückfragen und Freigaben kommen im Chat.
 Voraussetzungen: Claude Pro/Max-Abo, in Claude Code per `/login` mit dem claude.ai-Konto
 angemeldet (API-Keys gehen nicht), `opencode` mit OpenCode-Go-Login.
 
-Einmalig einrichten (als User `claude`):
+Die mitgelieferten Units sind Beispiele: User, Arbeitsverzeichnis und CLI-Pfade an die
+eigene Installation anpassen. Für das Dashboard werden diese Dienste nicht benötigt.
+
+Einmalig einrichten (im Beispiel als User `claude`):
 
 ```bash
 cd ~/kickbase-helper

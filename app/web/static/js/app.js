@@ -25,7 +25,7 @@ if ("serviceWorker" in navigator) {
     showToast(`Aktualisieren fehlgeschlagen (HTTP ${status}). Seite neu laden und noch einmal versuchen.`);
   });
   document.addEventListener("htmx:sendError", () => {
-    showToast("Keine Verbindung zum Server. Ist WireGuard verbunden?");
+    showToast("Keine Verbindung zum Server. Prüfe deine Netzwerkverbindung und ob der Server erreichbar ist.");
   });
   document.addEventListener("htmx:timeout", () => {
     showToast("Kickbase antwortet gerade sehr langsam. Später noch einmal versuchen.");

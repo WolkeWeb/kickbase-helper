@@ -110,7 +110,7 @@ def safe_next_path(candidate: str | None) -> str:
 class LoginThrottle:
     """Blocks further attempts after too many failures within a sliding window.
 
-    In-memory and per process, which is enough for a single-user app behind WireGuard.
+    In-memory and per process; intended for the single-user, single-app-instance setup.
     """
 
     def __init__(self, max_failures: int = 5, window_seconds: float = 300.0) -> None:

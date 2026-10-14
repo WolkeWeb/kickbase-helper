@@ -7,8 +7,9 @@ beschreibt das *Was* und *Wie* der Phasen.
 
 - **Nur eine Liga:** konfigurierbar über den eigenen Namen (`KICKBASE_LEAGUE_NAME` in `.env`). Kein Liga-Umschalter;
   ligabezogene Tabellen haben trotzdem eine `league_id`-Spalte.
-- **Secrets** sind Docker Secrets aus `/opt/kickbase-helper/secrets/` (Eigentümer `claude:claude`,
-  uid 1000, Modus 0600). App- und Worker-Container laufen deshalb als uid 1000.
+- **Secrets** sind lokale Docker-Secret-Dateien, standardmäßig unter `./secrets/`, Modus 0600.
+  Pfade und Container-UID/GID sind konfigurierbar. Bestehende Installationen können ihre
+  externen Secret-Pfade weiterverwenden.
 - **Erster Commit** (README, .gitignore) einmalig direkt auf `main`, danach nur Branches + PRs.
 - `GET /v4/leagues/{leagueId}/market` kommt zusätzlich in den Client (für „Kaufen“).
 - Die Spec enthält kaum Antwortschemas → Pydantic-Modelle entstehen aus echten, anonymisierten
@@ -61,7 +62,7 @@ Sekunde.
 
 | Phase | Inhalt |
 |---|---|
-| 0 | Grundgerüst: uv-Projekt, Compose (`db`, `app`, `worker`, `proxy`), Caddy mit IONOS-DNS-01, `.env`, Login, `/health`, PWA, CI |
+| 0 | Grundgerüst: uv-Projekt, Compose (`db`, `app`, `worker`, `proxy`), optionaler Caddy (Standard-HTTPS oder IONOS-DNS-01), `.env`, Login, `/health`, PWA, CI |
 | 1 | Kickbase-Client (nur lesend), Token-/Response-Cache in Postgres, Rate-Limit, Probe-Skript, Fixtures, Modelle |
 | 2 | „Mein Team“: Spielfeld mit Aufstellung, Kader mit Marktwert und 7-Tage-Trend, Kopfzeile Budget/Teamwert/Platz, Refresh |
 | 3 | Worker sammelt täglich Marktwert/Punkte/Status aller Bundesliga-Spieler; Spieler-Detailseite mit Charts |
@@ -180,8 +181,9 @@ Im Minus empfiehlt „Ins Plus kommen“ den Verkauf mit dem geringsten Punkteve
 
 ## Deployment
 
-`docker compose up -d --build` auf der VM; nur Caddy veröffentlicht 443 (TCP/UDP). Zertifikat per
-Let's Encrypt DNS-01 über IONOS; der Hostname löst nur intern (AdGuard) auf.
+`docker compose up -d --build` mit der in `.env` gewählten Zugriffsvariante. Standardmäßig
+lokal auf Loopback; optional Caddy mit Standard-HTTPS, eigener TLS-Proxy oder IONOS DNS-01.
+VPN und interne DNS-Auflösung sind frei wählbare Infrastruktur, siehe [Self-Hosting](self-hosting.md).
 
 ## Empfehlungen (Phase 4)
 

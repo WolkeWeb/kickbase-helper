@@ -12,6 +12,7 @@ x-app: &app
     dockerfile: docker/app.Dockerfile
   image: kickbase-helper-app:latest
   restart: unless-stopped
+  user: "${APP_UID:-1000}:${APP_GID:-1000}"
   env_file: .env
   environment:
     # POSTGRES_PASSWORD must be URL-safe (hex), it is embedded in the URL as is.
@@ -76,33 +77,11 @@ services:
       app:
         condition: service_healthy
 
-  proxy:
-    build:
-      context: docker/caddy
-    image: kickbase-helper-proxy:latest
-    restart: unless-stopped
-    # Only port published to the network (the worker's 8768 is loopback only). The hostname resolves internally (AdGuard) only.
-    ports:
-      - "443:443/tcp"
-      - "443:443/udp"
-    environment:
-      PUBLIC_URL: ${PUBLIC_URL:?fehlt in .env}
-    secrets:
-      - ionos_token
-    volumes:
-      - caddy_data:/data
-      - caddy_config:/config
-    depends_on:
-      - app
-    logging: *logging
-
 secrets:
   kickbase_email:
-    file: /opt/kickbase-helper/secrets/kickbase_email
+    file: ${KICKBASE_EMAIL_FILE:-./secrets/kickbase_email}
   kickbase_password:
-    file: /opt/kickbase-helper/secrets/kickbase_password
-  ionos_token:
-    file: /opt/kickbase-helper/secrets/ionos_token
+    file: ${KICKBASE_PASSWORD_FILE:-./secrets/kickbase_password}
   # Telegram bot token (notifications), gitignored file next to this compose file.
   telegram_bot_token:
     file: ./secrets/telegram_bot_token
@@ -116,5 +95,3 @@ secrets:
 
 volumes:
   pgdata:
-  caddy_data:
-  caddy_config:

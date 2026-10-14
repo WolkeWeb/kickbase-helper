@@ -1,0 +1,7 @@
+# Local first start, no domain, TLS provider or VPN required. Never bind HTTP to the LAN.
+services:
+  app:
+    ports:
+      - "127.0.0.1:${APP_HTTP_PORT:-8080}:8000"
+    environment:
+      SESSION_HTTPS_ONLY: "false"

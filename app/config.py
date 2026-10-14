@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     kickbase_league_name: str = "Meine Liga"
     # Telegram notifications (worker): chat that receives them; the bot token is a Docker secret.
     telegram_chat_id: str | None = None
-    # Links in notifications point here (reachable via WireGuard).
+    # Links in notifications point to the configured installation URL.
     public_url: str = "https://kickbase.example.com"
     # Language model (OpenAI-compatible chat completions); the key is the Docker secret
     # `llm_api_key`, without it everything runs without AI. Limits: config/ai.yaml.

@@ -1,6 +1,6 @@
 # HANDOFF.md
 
-Aktiver Agent: keiner (Veröffentlichung abgeschlossen)
+Aktiver Agent: Codex (anbieterunabhängige Einrichtung; allein)
 
 ## Ziel und Stand
 
@@ -8,6 +8,12 @@ Single-User-Dashboard für die eigene Kickbase-Liga, nur lesender Kickbase-Zugri
 Phasen 1–7b und die Erweiterungen bis C20 sind umgesetzt; Details in `docs/roadmap.md`.
 
 ## Aktueller Stand
+
+- Anbieterneutraler Betrieb: Kern plus vier Zugriffsvarianten; Docker-Setup-Assistent
+  ohne Secret-Ausgabe, konfigurierbare Pfade/UID/GID und generische Offline-Hinweise.
+  1369 Tests grün (1 Skip), neue Installation inkl. Anmeldung sowie alle Compose-Modi
+  geprüft. Bestehende IONOS-Konfiguration lokal übernommen, Ports/Volumes/Mounts exakt
+  verglichen; eigenständiger PR, danach CI und Deployment.
 
 - Veröffentlichung 14.10.2026: neutrale Beispielkonfiguration, Caddy über `PUBLIC_URL`,
   keine Live-Screenshots und keine vollständigen gescrapten Webseiten im Git-Stand.
@@ -21,6 +27,10 @@ Phasen 1–7b und die Erweiterungen bis C20 sind umgesetzt; Details in `docs/roa
   GitHub Secret-Scanning, Push-Schutz und private Sicherheitsmeldungen aktiviert.
 
 ## Plan
+
+- [x] L1 Anbieterneutraler Compose-Kern; lokale Einrichtung, Standard-HTTPS und externer
+  Proxy sowie IONOS als Option. Sichere Setup-Hilfe, Tests/CI, PR und Release.
+  Bestehende Installation behält IONOS/VPN und vorhandene Secret-Dateien.
 
 - [x] Veröffentlichungsstand und saubere neue Historie vorbereiten.
 - Weitere Produktfeatures nur auf neuen Auftrag umsetzen.

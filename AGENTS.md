@@ -21,7 +21,8 @@ steht in `docs/plan.md` und `docs/roadmap.md`, der aktuelle Arbeitsstand in `HAN
 - PostgreSQL 16, SQLAlchemy 2 (async) + Alembic
 - `httpx` für alle HTTP-Clients
 - `uv` (Deps), `ruff` (Lint/Format), `pytest` (Tests)
-- Vier Container: `app` (Web), `worker` (APScheduler), `db`, `proxy` (Caddy)
+- Kern: `app` (Web), `worker` (APScheduler), `db`. Optionaler `proxy` (Caddy) per
+  `compose.https.yaml` oder `compose.ionos.yaml`; lokal oder eigener Proxy ohne Caddy.
 
 ## Datenquellen
 
@@ -62,6 +63,9 @@ steht in `docs/plan.md` und `docs/roadmap.md`, der aktuelle Arbeitsstand in `HAN
    - **Frei:** `.env` im Repo (gitignored) und `./secrets/` im Repo (Telegram-Bot, optional
      `llm_api_key`; gitignored, `.dockerignore`, Modus 0600). `.env.example` mit Platzhaltern
      pflegen.
+   - Neue Installationen nutzen standardmäßig `./secrets/`; die bestehenden gesperrten
+     Dateien bleiben über konfigurierbare Pfade eingebunden. IONOS ist nur ein optionaler
+     Modus. `scripts/setup.py` niemals über eine bestehende Installation laufen lassen.
    - Werte aus allen Stufen nie loggen, nie committen, nie in PR-Texte.
 4. **Fixtures statt Live-API in Tests:** echte Antworten einmalig über `scripts/probe.py` holen,
    anonymisieren (Namen/IDs anderer Manager ersetzen) und unter `tests/fixtures/` ablegen.

@@ -1,6 +1,6 @@
 // Service worker: makes the app installable and keeps static assets available offline.
 // Pages and data always come from the network; offline only a short notice is shown.
-const CACHE = "kbh-static-v2";
+const CACHE = "kbh-static-v3";
 const OFFLINE_URL = "/static/offline.html";
 const PRECACHE = [OFFLINE_URL, "/static/css/offline.css"];
 

@@ -1,0 +1,9 @@
+{$PUBLIC_URL} {
+	tls {
+		dns ionos {env.IONOS_API_TOKEN}
+		# Public resolvers for the propagation check; the internal resolver rewrites this name.
+		resolvers 1.1.1.1 9.9.9.9
+	}
+	encode zstd gzip
+	reverse_proxy app:8000
+}

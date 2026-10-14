@@ -1,0 +1,36 @@
+# Optional private-network DNS-01 setup; reuses the existing Caddy certificate volumes.
+services:
+  app:
+    environment:
+      SESSION_HTTPS_ONLY: "true"
+  proxy:
+    build:
+      context: docker/caddy
+    image: kickbase-helper-proxy:latest
+    restart: unless-stopped
+    ports:
+      - "${PROXY_BIND_ADDRESS:-}${PROXY_BIND_ADDRESS:+:}${PROXY_HTTPS_PORT:-443}:443/tcp"
+      - "${PROXY_BIND_ADDRESS:-}${PROXY_BIND_ADDRESS:+:}${PROXY_HTTPS_PORT:-443}:443/udp"
+    environment:
+      PUBLIC_URL: ${PUBLIC_URL:?fehlt in .env}
+    secrets:
+      - ionos_token
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+secrets:
+  ionos_token:
+    file: ${IONOS_TOKEN_FILE:-./secrets/ionos_token}
+
+volumes:
+  caddy_data:
+  caddy_config:

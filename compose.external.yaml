@@ -1,0 +1,8 @@
+# HTTPS is terminated by an existing reverse proxy on the host.
+# Point it at http://127.0.0.1:8080. The app keeps Secure session cookies.
+services:
+  app:
+    ports:
+      - "127.0.0.1:${APP_HTTP_PORT:-8080}:8000"
+    environment:
+      SESSION_HTTPS_ONLY: "true"
