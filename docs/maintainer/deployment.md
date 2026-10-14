@@ -106,6 +106,11 @@ systemctl status claude-remote --no-pager    # läuft? Logs: journalctl -u claud
 
 ## Claude im Telegram-Chat
 
+Bei einer schon eingerichteten Bridge nach dem Update `:compose.claude.yaml` an
+`COMPOSE_FILE` in `.env` anhängen (hier: `compose.yaml:compose.ionos.yaml:compose.claude.yaml`)
+und `docker compose up -d --no-deps worker` ausführen. Der MCP-Port und Host-Zugriff
+liegen jetzt im optionalen Overlay. Das vorhandene Bridge-Token beibehalten.
+
 `@claude <Frage>` (oder `/claude`) im Bot-Chat öffnet ein Fenster von 10 Minuten: alle
 Nachrichten darin beantwortet Claude statt Mistral, jede Antwort verlängert das Fenster.
 `/claude_aus` beendet es, `/claude_model [sonnet|opus|haiku|claude-…]` zeigt bzw. wechselt das

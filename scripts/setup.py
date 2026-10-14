@@ -34,6 +34,13 @@ def check_new_installation(root: Path) -> None:
 def quote_env(value: str) -> str:
     if any(character in value for character in ("\n", "\r", "\0")):
         raise ValueError("Konfigurationswerte dürfen keine Zeilenumbrüche enthalten.")
+    # Compose and python-dotenv decode backslashes differently. These sequences either
+    # break the closing quote or change the value; reject them before creating any files.
+    if re.search(r"\\(?:[\\']|$)", value):
+        raise ValueError(
+            "Konfigurationswerte dürfen keinen abschließenden Backslash oder Backslash "
+            "vor einem Apostroph oder weiteren Backslash enthalten."
+        )
     return "'" + value.replace("'", "\\'") + "'"
 
 

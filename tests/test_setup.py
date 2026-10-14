@@ -73,6 +73,15 @@ def test_multiline_input_is_rejected_without_writing_or_echoing(destination, key
     assert not (destination / "secrets").exists()
 
 
+@pytest.mark.parametrize("league", ["private\\", "private\\\\Liga", "private\\'Liga"])
+def test_ambiguous_backslashes_are_rejected_before_writing(destination, league):
+    with pytest.raises(ValueError) as error:
+        setup.create_setup(destination, **(SAMPLE | {"league": league}))
+    assert "private" not in str(error.value)
+    assert not (destination / ".env").exists()
+    assert not (destination / "secrets").exists()
+
+
 def test_partial_failure_rolls_back_only_new_files(destination, monkeypatch):
     write = setup.write_private
 
