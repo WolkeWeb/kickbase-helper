@@ -4,9 +4,9 @@ Das Dashboard ist für einen einzelnen Account im eigenen Netz/VPN vorgesehen.
 Eine öffentliche Code-Veröffentlichung macht die laufende Installation nicht öffentlich.
 Die Anwendung hat einen eigenen Login; zusätzlich den Netzwerkzugriff einschränken.
 
-Sicherheitslücken bitte über die private GitHub-Meldung unter
-`Security → Advisories → Report a vulnerability` melden, sobald diese Funktion im
-öffentlichen Repository aktiviert ist. Ist sie nicht verfügbar, keine Details in einem
+Sicherheitslücken bitte über die aktivierte
+[private GitHub-Meldung](https://github.com/WolkeWeb/kickbase-helper/security/advisories/new)
+(`Security → Advisories → Report a vulnerability`) melden. Ist sie nicht verfügbar, keine Details in einem
 öffentlichen Issue veröffentlichen; zunächst einen privaten Kontaktweg beim Maintainer anfragen.
 Keine Zugangsdaten, Cookies, Datenbank-Dumps oder Daten anderer Liga-Manager anhängen.
 

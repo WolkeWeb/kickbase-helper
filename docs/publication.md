@@ -43,16 +43,20 @@ Für den eigenen Projektcode ist noch keine Open-Source-Lizenz festgelegt.
 
 Ein Lösch-Commit allein entfernt private Bilder und Angaben nicht aus alten Commits.
 Auch ein Force-Push bereinigt nicht automatisch GitHub-PR-Referenzen, Kommentare und Logs.
-Deshalb wird die bisherige Entwicklung unter
-`WolkeWeb/kickbase-helper-private-history` **privat** erhalten; die öffentliche Adresse
-`WolkeWeb/kickbase-helper` erhält ausschließlich den bereinigten Stand mit neuer Historie.
+Deshalb wurde die bisherige Entwicklung unter
+`WolkeWeb/kickbase-helper-private-history` **privat und archiviert** erhalten; die öffentliche Adresse
+`WolkeWeb/kickbase-helper` enthält ausschließlich den bereinigten Stand mit neuer Historie.
 Das ist ein neues GitHub-Repository, kein Fork des privaten Archivs. Alte PR-Nummern in
 Entwicklungsdokumenten beziehen sich auf das private Archiv, nicht auf neue öffentliche PRs.
 
 Eine vollständige lokale Sicherung der bisherigen Git-Refs liegt außerhalb des Repos.
 Der geparkte Quoten-Branch bleibt ebenfalls im privaten Archiv erhalten. Es wird kein
 Backup, alter Git-Ref, PR-Text oder Actions-Artefakt in das neue Repository importiert.
-Vor der öffentlichen Freigabe werden der frische Git-Verlauf und seine CI erneut geprüft.
+Der frische Git-Verlauf wurde ohne Scanner-Ausnahmen geprüft (0 Treffer), anschließend
+waren CI und Proxy-Image in GitHub erfolgreich. Die öffentliche Freigabe ist abgeschlossen.
+Ein anonymer Git-Klon enthielt zur Freigabe genau einen neuen Commit. Das private Archiv
+und alte PRs waren anonym nicht erreichbar (HTTP 404); eine vollständige alte Commit-ID
+wurde im neuen Repository mit „No commit found for SHA“ zurückgewiesen (HTTP 422).
 
 Vorhandene andere lokale Klone müssen neu aus dem öffentlichen Repo geklont werden.
 Alte Branches nicht in die öffentliche Historie mergen oder pushen, weil sie entfernte
@@ -61,3 +65,15 @@ Die bestehende Anwendung und ihre Datenbank werden durch den Repo-Wechsel nicht 
 
 Der Audit ist eine zeitpunktbezogene Prüfung, keine Garantie gegen jede Art sensibler
 Information. Der private Altbestand bleibt deshalb privat.
+
+## GitHub-Schutz
+
+`main` erfordert einen PR und die erfolgreichen Checks `Lint & Tests` sowie
+`App-Image (Build + Smoke-Test)`, auch für den Administrator. Force-Push und Löschen
+sind gesperrt. Merges erfolgen per Squash. Secret-Scanning, Secret-Push-Schutz,
+Dependabot-Warnungen/-Sicherheitsupdates und private Sicherheitsmeldungen sind aktiviert.
+Workflows fremder Fork-Beiträge benötigen eine Freigabe vor ihrer Ausführung.
+
+Die vollständigen lokalen Prüfungen ergeben 1360 erfolgreiche Tests und einen Skip
+(SQLite und isoliertes PostgreSQL). Gezielt nach Änderungen nachgetestet; Ruff,
+actionlint, zizmor, Caddy-Hostprüfung und der Secret-Scan waren erfolgreich.

@@ -1,6 +1,6 @@
 # HANDOFF.md
 
-Aktiver Agent: Codex (öffentliche Erstveröffentlichung)
+Aktiver Agent: keiner (Veröffentlichung abgeschlossen)
 
 ## Ziel und Stand
 
@@ -16,7 +16,9 @@ Phasen 1–7b und die Erweiterungen bis C20 sind umgesetzt; Details in `docs/roa
   Die alte Entwicklung samt PRs, Logs und Quoten-Branch bleibt im privaten Archiv.
 - Lokal: 1360 Tests erfolgreich, 1 Skip; SQLite und isoliertes PostgreSQL.
   Ruff, actionlint, zizmor, Secret-Scan ohne Ausnahmen und Caddy-Hostprüfung grün.
-  Der frische Verlauf wird vor der öffentlichen Freigabe nochmals in GitHub CI geprüft.
+  CI und Proxy-Image der neuen Historie erfolgreich; öffentlich unter der bisherigen URL.
+  Das Altarchiv ist privat/archiviert. `main`: Pflicht-CI, PRs und kein Force-Push;
+  GitHub Secret-Scanning, Push-Schutz und private Sicherheitsmeldungen aktiviert.
 
 ## Plan
 
