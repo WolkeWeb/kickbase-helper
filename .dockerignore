@@ -9,7 +9,8 @@
 .ruff_cache
 docs
 tests
-scripts
+scripts/*
+!scripts/setup.py
 docker/caddy
 secrets
 

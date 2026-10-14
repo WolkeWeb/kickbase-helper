@@ -21,9 +21,9 @@ COPY alembic ./alembic
 COPY config ./config
 COPY app ./app
 COPY docker/app-entrypoint.sh /usr/local/bin/app-entrypoint
+COPY scripts/setup.py /srv/setup.py
 
-# uid 1000 matches the owner of the Docker secret files on the host (mode 0600),
-# so the bind-mounted secrets are readable without running as root.
+# Default non-root user; Compose can match the host file owner with APP_UID/APP_GID.
 RUN useradd --uid 1000 --user-group --no-create-home --shell /usr/sbin/nologin app
 USER 1000:1000
 

@@ -103,28 +103,12 @@ jobs:
     name: App-Image (Build + Smoke-Test)
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: smoke
-          POSTGRES_PASSWORD: smoke
-          POSTGRES_DB: smoke
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U smoke"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: compose.yaml
-        run: |
-          cp .env.example .env # placeholders suffice for validation
-          docker compose config --quiet
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+      - run: uv sync --locked --no-dev
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
@@ -134,20 +118,7 @@ jobs:
           load: true
           cache-from: type=gha,scope=app
           cache-to: type=gha,scope=app,mode=max
-      # Same start path as on the VM: entrypoint → alembic upgrade head → uvicorn → /health.
-      - name: Smoke-Test (Migrationen + /health)
-        run: |
-          hash=$(docker run --rm kickbase-helper-app:ci \
-            python -c "from app.auth import hash_password; print(hash_password('ci-smoke'))")
-          docker run -d --name app --network host --env-file .env.example \
-            -e APP_PASSWORD_HASH="$hash" \
-            -e SESSION_SECRET="$(openssl rand -hex 32)" \
-            -e DATABASE_URL=postgresql+psycopg://smoke:smoke@localhost:5432/smoke \
-            kickbase-helper-app:ci web
-          for _ in $(seq 30); do
-            if curl -sf http://127.0.0.1:8000/health; then echo; exit 0; fi
-            sleep 2
-          done
-          echo "::error::App wurde nicht gesund"
-          docker logs app
-          exit 1
+      # Exercise the documented first-install path, every Compose mode and local HTTP login.
+      # The isolated smoke stack starts db/app only; no worker and no Kickbase API requests.
+      - name: Erstinstallation (Compose-Varianten + Migrationen + Login)
+        run: uv run --no-dev python scripts/check_deployment.py --smoke-image kickbase-helper-app:ci

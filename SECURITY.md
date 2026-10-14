@@ -1,8 +1,10 @@
 # Sicherheit
 
-Das Dashboard ist für einen einzelnen Account im eigenen Netz/VPN vorgesehen.
+Das Dashboard ist für einen einzelnen Account vorgesehen. Zugriff lokal, per HTTPS,
+eigenem TLS-Proxy oder privatem Netz/VPN wählen; siehe [Self-Hosting](docs/self-hosting.md).
 Eine öffentliche Code-Veröffentlichung macht die laufende Installation nicht öffentlich.
-Die Anwendung hat einen eigenen Login; zusätzlich den Netzwerkzugriff einschränken.
+Die Anwendung hat einen eigenen Login. Lokales HTTP bindet ausschließlich an Loopback;
+bei HTTPS bleiben die Session-Cookies Secure. Netzwerkzugriff nach Bedarf einschränken.
 
 Sicherheitslücken bitte über die aktivierte
 [private GitHub-Meldung](https://github.com/WolkeWeb/kickbase-helper/security/advisories/new)

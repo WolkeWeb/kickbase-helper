@@ -74,7 +74,8 @@ in [`config/scoring.yaml`](config/scoring.yaml) und werden auf den Seiten angeze
 
 ```mermaid
 flowchart LR
-  phone["📱 Handy / Browser"] -- WireGuard --> proxy["Caddy<br/>TLS via IONOS DNS-01"]
+  phone["📱 Handy / Browser"] --> proxy["Optional: Caddy oder eigener TLS-Proxy"]
+  phone -- localhost / SSH-Tunnel --> app
   proxy --> app["app<br/>FastAPI + HTMX"]
   app --> db[("PostgreSQL 16")]
   worker["worker<br/>APScheduler"] --> db
@@ -90,51 +91,46 @@ flowchart LR
 - **app** rendert die Seiten (Jinja2 + HTMX, Chart.js), mit eigenem Login.
 - **worker** sammelt nach festem Zeitplan Marktwerte, Punkte, Aufstellungen, Prognosen, Verletzungen,
   Meldungen und Liga-Transfers und schickt Telegram-Nachrichten. Zeitplan: [`docs/plan.md`](docs/plan.md).
-- **proxy** ist der einzige Container mit offenem Port (443); erreichbar nur intern über WireGuard.
+- **Zugriff wählbar:** lokal auf Loopback, Caddy mit Standard-HTTPS, eigener Reverse Proxy oder
+  optional IONOS DNS-01. VPN und DNS-Anbieter sind Teil der eigenen Infrastruktur.
 - Der Kickbase-Client erlaubt ausschließlich `GET` und den Login – jede andere Methode wirft eine Exception.
 
 ## Schnellstart
 
-Voraussetzungen: Docker mit Compose, Python 3.12 und `uv` für die Einrichtung, ein Kickbase-Account
-und für TLS eine eigene Domain bei IONOS. `PUBLIC_URL` auf die eigene HTTPS-Adresse und
-`KICKBASE_LEAGUE_NAME` auf den exakten eigenen Liganamen setzen.
-Der Zugriff auf die Installation bleibt auf das eigene Netz/VPN beschränkt; DNS allein ist keine
-Zugriffssperre. Port 443 nicht ungeschützt ins Internet weiterleiten.
+Benötigt werden **Docker mit Compose und ein Kickbase-Account**. Der erste Start funktioniert
+lokal ohne Domain, IONOS oder VPN. In Bash unter Linux/macOS:
 
 ```bash
 git clone https://github.com/WolkeWeb/kickbase-helper.git && cd kickbase-helper
-cp .env.example .env                       # Liga-Name, Zeitzone, DB-Passwort …
-uv run python scripts/hash_password.py     # Passwort-Hash für den App-Login → .env
+docker build -f docker/app.Dockerfile -t kickbase-helper-app:latest .
+docker run --rm -it --network none --user "$(id -u):$(id -g)" \
+  -v "$PWD:/setup" -w /setup \
+  kickbase-helper-app:latest python /srv/setup.py
+docker compose up -d
 ```
 
-Secrets liegen als Dateien und werden als Docker Secrets eingebunden – nie in der `.env`:
+Der Assistent fragt die eigene Liga, Kickbase-Zugangsdaten und ein separates Dashboard-Passwort
+ab. Er speichert Secrets lokal, erzeugt die nötigen Schlüssel und überschreibt keine bestehende
+Einrichtung. Danach **http://localhost:8080** öffnen. Alternativ mit Python 3.12 und `uv`:
+`uv run python scripts/setup.py`, anschließend `docker compose up -d --build`.
 
-| Datei | Inhalt |
-|---|---|
-| `/opt/kickbase-helper/secrets/kickbase_email`, `kickbase_password` | Kickbase-Zugang |
-| `/opt/kickbase-helper/secrets/ionos_token` | IONOS-API-Token für das Zertifikat |
-| `./secrets/telegram_bot_token` | optional: Telegram-Bot |
-| `./secrets/llm_api_key` | optional: Mistral-Key für KI-Funktionen |
-| `./secrets/claude_bridge_token` | optional: Claude im Telegram-Chat (`docs/deployment.md`) |
+Für Server/Handy/PWA den passenden Zugriff in `.env` wählen:
 
-Die drei optionalen Secret-Dateien müssen existieren, dürfen aber leer sein. Vor dem Start
-anlegen; vorhandene Werte werden dabei nicht überschrieben:
+| Variante | Compose-Ergänzung | Voraussetzung |
+|---|---|---|
+| Lokal / SSH-Tunnel | `compose.local.yaml` (Standard) | keine Domain |
+| HTTPS mit Caddy | `compose.https.yaml` | beliebiger DNS-Anbieter, eigene Domain und erreichbare ACME-Ports |
+| Eigener TLS-Proxy | `compose.external.yaml` | vorhandener Reverse Proxy; App nur auf Loopback |
+| IONOS DNS-01 | `compose.ionos.yaml` | optionales IONOS-Token; auch für rein interne Hosts |
 
-```bash
-install -d -m 700 secrets
-for name in telegram_bot_token llm_api_key claude_bridge_token; do
-  test -e "secrets/$name" || install -m 600 /dev/null "secrets/$name"
-done
-docker compose up -d --build
-curl -fsS https://DEINE-DOMAIN/health
-```
-Ohne Telegram- oder KI-Key läuft alles weiter – die jeweiligen Funktionen fallen einfach weg.
+**[Einrichtung, Varianten und Übernahme vorhandener Installationen](docs/self-hosting.md)**.
+Telegram, KI und Claude-Bridge bleiben optional; ohne ihre Keys läuft das Dashboard weiter.
 
 ## Konfiguration
 
 | Datei | Wofür |
 |---|---|
-| `.env` | Liga, Zeitzone, Cache-Zeiten, Login, Telegram-Chat, KI-Modell |
+| `.env` | Zugriffsvariante, Secret-Pfade, Liga, Zeitzone, Login und optionale Integrationen |
 | [`config/scoring.yaml`](config/scoring.yaml) | Score-Gewichte, Gebotsempfehlung, Verkaufs-Guide, Trading-Schwellen und Deadline-Puffer |
 | [`config/ai.yaml`](config/ai.yaml) | harte KI-Grenzen: Aufrufe, Tokens, Budget pro Tag/Monat |
 | [`config/notifications.yaml`](config/notifications.yaml) | Schwellen für Telegram-Meldungen |
