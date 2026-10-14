@@ -185,6 +185,7 @@ als aktuell auszugeben.
 
 Sicherheitsmeldungen: [SECURITY.md](SECURITY.md). Herkunft und Lizenztexte der eingebundenen
 Bibliotheken und API-Spezifikation: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
-Für den eigenen Projektcode wurde bisher keine Open-Source-Lizenz festgelegt.
+Der eigene Projektcode steht unter der [MIT-Lizenz](LICENSE). Beiträge: [CONTRIBUTING.md](CONTRIBUTING.md)
+und [Verhaltenskodex](CODE_OF_CONDUCT.md).
 Der Veröffentlichungscheck samt Grenzen der historischen Bereinigung steht in
 [docs/publication.md](docs/publication.md).

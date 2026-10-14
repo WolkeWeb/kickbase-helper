@@ -1,0 +1,35 @@
+name: Idee / Feature request
+description: Vorschlag für eine neue Funktion oder Verbesserung. / Suggest a new feature or improvement.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Hinweis: Kickbase-Zugriff bleibt **nur lesend** – Funktionen, die bieten, verkaufen oder die
+        Aufstellung ändern, werden nicht umgesetzt.
+
+        *Note: Kickbase access stays **read-only** – features that bid, sell or change the lineup will not be added.*
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / Ziel – Problem / Goal
+      description: Welches Problem soll gelöst werden? / What problem should this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Vorschlag / Proposed solution
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternativen / Alternatives
+  - type: textarea
+    id: data
+    attributes:
+      label: Datenquelle / Data source
+      description: |
+        Braucht die Idee neue Daten? Woher (Kickbase-Endpunkt, OpenLigaDB, andere Seite)?
+        Does it need new data? From where?

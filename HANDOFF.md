@@ -9,6 +9,9 @@ Phasen 1–7b und die Erweiterungen bis C20 sind umgesetzt; Details in `docs/roa
 
 ## Aktueller Stand
 
+- Community-Dateien: `LICENSE` (MIT), `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md` (Deutsch mit
+  englischer Kurzfassung), Issue-Formulare unter `.github/ISSUE_TEMPLATE/` (Blanko-Issues aus,
+  Sicherheitsmeldungen verweisen auf private Advisories). README/publication.md angepasst.
 - Anbieterneutraler Betrieb: vier Zugriffsvarianten, Docker-Setup ohne Secret-Ausgabe,
   konfigurierbare Pfade/UID/GID und generische Offline-Hinweise. 1369 Tests grün (1 Skip),
   Erststart inkl. Login und alle Compose-Modi geprüft; PR #5 nach grüner CI gemergt/deployt.

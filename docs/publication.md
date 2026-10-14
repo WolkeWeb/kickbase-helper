@@ -37,7 +37,7 @@ aufnimmt. Sie prüft außerdem Secrets in allen lokal vorhandenen Git-Refs.
 Gespeicherte komplette LigaInsider-Seiten wurden durch strukturelle Regression-Fixtures
 mit synthetischem Text ersetzt. Lizenztexte für Chart.js, htmx und die API-Spezifikation
 sind unter `licenses/` abgelegt. Sicherheitsmeldungen sind in `SECURITY.md` beschrieben.
-Für den eigenen Projektcode ist noch keine Open-Source-Lizenz festgelegt.
+Der eigene Projektcode steht seit 14.10.2026 unter der MIT-Lizenz (`LICENSE`).
 
 ## Warum eine neue Historie erforderlich ist
 
