@@ -84,6 +84,7 @@ def check_modes(root: Path) -> None:
         config = inspect_mode(root, mode)
         services = config["services"]
         assert not services["db"].get("ports"), "Database must stay private"
+        assert not services["worker"].get("ports"), "Worker publishes nothing by default"
         assert ("ionos_token" in config["secrets"]) == (mode == "ionos")
         if mode in ("local", "external"):
             ports = services["app"]["ports"]
@@ -115,6 +116,12 @@ def check_modes(root: Path) -> None:
             assert not services["app"].get("ports")
         print(f"Compose {mode or 'core'}: ok")
     env_file.write_text(original)
+    # Optional Claude bridge overlay: MCP port on loopback only.
+    worker = inspect_mode(root, "claude")["services"]["worker"]
+    assert [(p["host_ip"], p["target"]) for p in worker["ports"]] == [("127.0.0.1", 8768)]
+    hosts = str(worker["extra_hosts"])
+    assert "host.docker.internal" in hosts and "host-gateway" in hosts
+    print("Compose claude: ok")
 
 
 def smoke_test(root: Path, image: str) -> None:

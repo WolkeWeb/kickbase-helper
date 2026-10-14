@@ -67,12 +67,8 @@ services:
       - telegram_bot_token
       - llm_api_key
       - claude_bridge_token
-    # Claude im Telegram-Chat: the bridge runs on the host (deploy/claude-bridge/), and the
-    # Claude CLI there reads the Kickbase tools from the worker – published on loopback only.
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    ports:
-      - "127.0.0.1:8768:8768"
+    # Optional Claude bridge (experimental): host access and the MCP port live in
+    # compose.claude.yaml, so a default installation publishes no worker port.
     depends_on:
       app:
         condition: service_healthy

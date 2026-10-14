@@ -88,7 +88,7 @@ Für jede offene Checkbox:
    Kein `--auto`: Das Repo ist privat im Gratis-Plan und hat keine Pflicht-Checks, `--auto` würde
    sofort mergen und die CI abbrechen. CI rot → Fehler über opencode beheben lassen, pushen,
    Befehl wiederholen.
-5. Deployen nach `docs/deployment.md` und Health-Check.
+5. Deployen nach `docs/maintainer/deployment.md` und Health-Check.
 6. Kurze Schlussmeldung im Chat: was jetzt kann, PR-Link, offene Punkte. Empfehlen, für den
    nächsten Auftrag eine neue Session zu öffnen.
 
