@@ -9,6 +9,9 @@ Phasen 1–7b und die Erweiterungen bis C20 sind umgesetzt; Details in `docs/roa
 
 ## Aktueller Stand
 
+- README überarbeitet: „Auf einen Blick“ (Voraussetzungen, Abgrenzung), Kurzfunktionen,
+  Schnellstart früh; Details in `docs/features.md` und `docs/development.md`. Screenshots mit
+  prozentualer Breite, damit alle gleich groß rendern.
 - README-Screenshots im iPhone-Rahmen aus synthetischen Daten: `scripts/demo_server.py` +
   `demo_data.py` (Test-Fixtures, erfundene Marktwerte), `scripts/readme_screenshots.py`;
   Bilder nur unter `docs/images/demo/` (`check_public_tree.py` erlaubt nur diesen Ordner).
