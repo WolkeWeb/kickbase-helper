@@ -13,9 +13,21 @@
 
 <p align="center">
   Privates, mobil-first Dashboard für einen Kickbase-Account – mit Empfehlungen, die zeigen,
-  <b>warum</b> sie etwas empfehlen.<br>
-  Single-User, läuft als Docker-Stack im Homelab und greift <b>nur lesend</b> auf Kickbase zu.
+  <b>warum</b> sie etwas empfehlen.
 </p>
+
+<p align="center">
+  <img src="docs/images/demo/app-heute.png" alt="Heute: Budget, Teamwert und die wichtigsten To-dos vor der Deadline" width="19%">
+  <img src="docs/images/demo/app-beste-elf.png" alt="Beste Elf: stärkste Aufstellung nach Aufstellungsindex" width="19%">
+  <img src="docs/images/demo/app-kaufen.png" alt="Kaufen: Marktangebote mit Score und Gebotsempfehlung" width="19%">
+  <img src="docs/images/demo/app-verkaufen.png" alt="Verkaufen: Spieler mit Marktwertrückgang oder unsicherem Einsatz" width="19%">
+  <img src="docs/images/demo/app-spieler.png" alt="Spielerseite: Halten oder verkaufen mit Score und Gründen" width="19%">
+</p>
+
+<p align="center"><sub>
+  Heute · Beste Elf · Kaufen · Verkaufen · Spieler – Demo mit erfundenen Daten („Testliga“),
+  keine echten Konto-, Liga- oder Managerdaten.
+</sub></p>
 
 > [!IMPORTANT]
 > **Inoffizielles Community-Projekt** ohne Verbindung zu Kickbase, LigaInsider oder kicker.
@@ -23,108 +35,49 @@
 > Nutzungsbedingungen von Kickbase verstoßen und im Extremfall zur Sperrung des Accounts
 > führen. Nutzung auf eigenes Risiko und ohne Gewähr (siehe [Lizenz](LICENSE)).
 
----
+## Auf einen Blick
 
-## So sieht es aus
+**Was es ist:** Ein Dashboard für **deinen** Kickbase-Account und **eine** Liga. Es zeigt dir
+Aufstellung, Kader, Budget und Marktwerte und sagt dir, wen du kaufen, halten oder verkaufen
+solltest – jede Empfehlung mit nachvollziehbaren Gründen statt Blackbox.
 
-<table align="center">
-  <tr>
-    <td align="center"><img src="docs/images/demo/app-heute.png" alt="Heute: Budget, Teamwert und die wichtigsten To-dos vor der Deadline" width="170"></td>
-    <td align="center"><img src="docs/images/demo/app-beste-elf.png" alt="Beste Elf: stärkste Aufstellung nach Aufstellungsindex" width="170"></td>
-    <td align="center"><img src="docs/images/demo/app-kaufen.png" alt="Kaufen: Marktangebote mit Score und Gebotsempfehlung" width="170"></td>
-    <td align="center"><img src="docs/images/demo/app-verkaufen.png" alt="Verkaufen: Spieler mit Marktwertrückgang oder unsicherem Einsatz" width="170"></td>
-    <td align="center"><img src="docs/images/demo/app-spieler.png" alt="Spielerseite: Halten oder verkaufen mit Score und Gründen" width="170"></td>
-  </tr>
-  <tr>
-    <td align="center"><sub><b>Heute</b><br>To-dos vor der Deadline</sub></td>
-    <td align="center"><sub><b>Beste Elf</b><br>nach Aufstellungsindex</sub></td>
-    <td align="center"><sub><b>Kaufen</b><br>Score &amp; Gebotstipp</sub></td>
-    <td align="center"><sub><b>Verkaufen</b><br>mit Begründung</sub></td>
-    <td align="center"><sub><b>Spieler</b><br>Halten oder verkaufen?</sub></td>
-  </tr>
-</table>
+**Was du brauchst:**
 
-<p align="center"><sub>
-  Die Aufnahmen entstehen aus den anonymisierten Test-Fixtures und frei erfundenen Marktwerten
-  („Testliga“) – keine echten Konto-, Liga- oder Managerdaten.
-  So lassen sie sich selbst erzeugen: <a href="#entwicklung">Entwicklung</a>.
-</sub></p>
+- Docker mit Compose (auf dem eigenen Rechner, Homelab oder Server) und ein Kickbase-Account.
+- Optional: Telegram-Bot für Meldungen, Mistral-Gratis-Key für KI-Texte, eigene Domain für HTTPS.
+  Ohne diese Extras läuft alles weiter.
+
+**Was es nicht ist:**
+
+- Kein gehosteter Dienst: Du betreibst es selbst, die Daten bleiben bei dir.
+- Kein Mehrbenutzer-System und kein Liga-Umschalter.
+- Kein Bot: Es gibt **keine** Gebote, Verkäufe oder Aufstellungsänderungen. Der Kickbase-Client
+  erlaubt technisch nur `GET` und den Login.
 
 ## Inhalt
 
-- [So sieht es aus](#so-sieht-es-aus)
-- [Was es kann](#was-es-kann)
-- [Wie die Empfehlungen entstehen](#wie-die-empfehlungen-entstehen)
-- [Architektur](#architektur)
-- [Schnellstart](#schnellstart)
-- [Konfiguration](#konfiguration)
-- [Entwicklung](#entwicklung)
-- [Datenquellen und Spielregeln](#datenquellen-und-spielregeln)
+[Funktionen](#funktionen) ·
+[Schnellstart](#schnellstart) ·
+[Wie die Empfehlungen entstehen](#wie-die-empfehlungen-entstehen) ·
+[Betrieb und Konfiguration](#betrieb-und-konfiguration) ·
+[Architektur](#architektur) ·
+[Datenquellen und Spielregeln](#datenquellen-und-spielregeln) ·
+[Entwicklung und Beiträge](#entwicklung-und-beiträge)
 
-## Was es kann
+## Funktionen
 
-| | |
-|---|---|
-| **Heute** | Countdown bis zur Aufstellungs-Deadline und alles, was davor zu tun ist: leere Plätze, Startspieler mit Ausfallrisiko, Minus, Kaderlücken, offene Gebote, beste Kaufchance – jeweils mit Link. |
-| **Mein Team** | Budget, Teamwert, Ligaplatz, Aufstellung auf dem Spielfeld, Kader mit aktueller 24-h-Marktwertbewegung, Originalartikeln auch ohne KI und datierten Ausfall-/Rückkehrmeldungen, **Spieltags-Bilanz** (Punkte, Platz mit Δ, Top/Flop, verpasste Punkte durch die Bank) mit Rangverlauf-Diagramm. |
-| **Eigener Stammkader** | Spieler lokal schützen oder als Trading notieren. Finanzierungspläne verkaufen geschützte Stammspieler nicht; ein dadurch ungedecktes Defizit bleibt sichtbar. Eigene hypothetische Verkäufe sind im Simulator mit Warnung möglich. |
-| **Transfer-Simulation** | Verkäufe und Käufe lokal kombinieren: Wunschpreis, Budget nach verbleibenden Geboten, beste Formation/Index und freie Plätze. Unbestätigte oder zu späte Käufe zählen nicht zur nächsten Elf. Einstieg über Trading oder ein Kaufangebot. |
-| **Spieltagspunkte** | Eigene gespeicherte Spieltags-Elf mit vorläufigen Spielerpunkten und offizieller Spieltagssumme. Datenstand sichtbar, Bank getrennt, während möglicher laufender Partien bei sichtbarer Online-Seite im 10-Minuten-Takt. |
-| **Kaufen** | Marktangebote als kompakte Zeilen mit Score, Preis, Gebotsempfehlung (70-%-Quantil der Liga-Käufe), **Aufstellungsindex und Index pro Mio. €** und Deadline-Hinweis; Filter nach Position, Preis, Kaderlücke. |
-| **Verkaufen** | Spieler mit aktuellem Marktwertrückgang oder vor der Deadline schlechter Startchance; steigende Trading-Spieler werden unter der Woche gehalten; im Minus der Verkaufs-Guide mit der Kombination, die **am wenigsten Punkte kostet**. |
-| **Trading** | Tagesanstieg und Gewinn seit Kauf; eigener Plan bis zur echten Deadline mit Budget nach offenen Geboten, nötigen Verkäufen und Schutz der vorgeschlagenen Elf. Kaufchancen berücksichtigen Aufschlag und verbleibende Updates; Gewinne werden nur als Szenario gezeigt. |
-| **Beste Elf** | Die stärkste Aufstellung aus dem Kader nach **Aufstellungsindex** (0–100 je Spieler), mit Notbesetzung statt leerer Plätze. |
-| **Spieler** | „Kaufen?“ bzw. „Halten oder verkaufen?“ mit Score und Gründen, **Aufstellungsindex** für die nächsten Spiele mit Aufschlüsselung Startchance × Form × Gegner, Startchance (LigaInsider-Prognose, Verletzungen, Startquote), Markt-Karte, Marktwert- und Punkte-Verlauf, KI-Einschätzung. |
-| **Bilanz** | Wie sich empfohlene Spieler nach 1, 3 und 7 Tagen entwickelt haben und wie die eigenen Gebote ausgingen. |
-| **Telegram** | Meldungen zu eigenen Spielern, Warnung ~2 h vor der Deadline, Morgen-Briefing – und Fragen an das Dashboard („Wen soll ich verkaufen?“), beantwortet nur aus den eigenen Daten. **Spieltags-Bilanz** nach Abpfiff (Punkte, Platz-Änderung, Top/Flop, verpasste Punkte); dieselbe Bilanz steht im Lagebild des Bots und auf der Team-Seite. **Merkliste** (`/merkliste`): Alarme, wenn ein beobachteter Spieler auf den Markt kommt, sein Preis eine Schwelle (`price_below`) unterschreitet, sich sein Status ändert oder er aus der LigaInsider-Prognose-Elf fällt; dieselben Spieler stehen im Lagebild des Bots. **Gebote auf eigene Spieler**: Alarm, sobald ein anderer Liga-Manager einen meiner gelisteten Spieler über Marktwert überbietet; dieselben Listings stehen ebenfalls im Lagebild des Bots (ohne Bietername). |
+- **Heute** – Countdown bis zur Aufstellungs-Deadline und alles, was davor zu tun ist.
+- **Mein Team** – Budget, Teamwert, Ligaplatz, Aufstellung, Kader und Spieltags-Bilanz.
+- **Kaufen / Verkaufen / Trading** – Marktangebote und eigene Spieler mit Score, Gebotsempfehlung
+  und Verkaufs-Guide.
+- **Beste Elf und Transfer-Simulation** – stärkste Aufstellung und „Was wäre, wenn“ für Käufe
+  und Verkäufe, rein lokal gerechnet.
+- **Spielerseiten** – Form, Startchance, Gegnerprogramm, Marktwert- und Punkteverlauf.
+- **Bilanz** – wie sich frühere Empfehlungen und eigene Gebote entwickelt haben.
+- **Telegram (optional)** – Meldungen, Deadline-Warnung, Morgen-Briefing, Fragen an das
+  Dashboard und eine Merkliste mit Alarmen.
 
-Auf dem Handy gebaut (375 px, Dark Mode, PWA fürs Homescreen-Icon), ab 900 px zweispaltig.
-
-## Wie die Empfehlungen entstehen
-
-Jeder Score (0–100) zeigt seine Bestandteile mit Gewicht und Begründung – nichts ist eine Blackbox.
-
-Der **Aufstellungsindex** ergänzt den Score: Startchance × positionsbezogener Formrang ×
-Programm der nächsten Gegner, auf einer Skala von 0–100. Er ist eine relative Kennzahl;
-tatsächliche Kickbase-Punkte und Wahrscheinlichkeiten werden damit nicht vorhergesagt.
-Fehlende Daten werden im Ergebnis kenntlich gemacht. Die Beste Elf maximiert die Index-Summe.
-
-| Bestandteil | Was er misst |
-|---|---|
-| **Form** | Punkte der letzten 5 Spieltage (neuere zählen mehr), als Rang in der Position |
-| **Trend** | Marktwert-Änderung der letzten 7 Tage |
-| **Programm** | Stärke der nächsten 3 Gegner, Heim/Auswärts |
-| **Einsatz** | Startchance: LigaInsider-Prognose, Verletzungen, Startquote der letzten Vereinsspiele |
-| **Klasse** | Marktwert-Rang in der Position plus Saison-Ø – damit ein Top-Spieler nach einer schwachen Woche nicht unter Mittelmaß fällt |
-| **Status** | Abzug für angeschlagen, Aufbautraining, verletzt/gesperrt |
-
-Kaufen, Verkaufen und Beste Elf gewichten die Bestandteile unterschiedlich. Alle Gewichte stehen
-in [`config/scoring.yaml`](config/scoring.yaml) und werden auf den Seiten angezeigt.
-
-## Architektur
-
-```mermaid
-flowchart LR
-  phone["📱 Handy / Browser"] --> proxy["Optional: Caddy oder eigener TLS-Proxy"]
-  phone -- localhost / SSH-Tunnel --> app
-  proxy --> app["app<br/>FastAPI + HTMX"]
-  app --> db[("PostgreSQL 16")]
-  worker["worker<br/>APScheduler"] --> db
-  worker -- Telegram --> phone
-  app -. nur GET .-> kb["Kickbase API"]
-  worker -. nur GET .-> kb
-  worker --> oldb["OpenLigaDB"]
-  worker --> li["LigaInsider"]
-  worker --> kicker["kicker RSS"]
-  worker -. optional .-> llm["Mistral"]
-```
-
-- **app** rendert die Seiten (Jinja2 + HTMX, Chart.js), mit eigenem Login.
-- **worker** sammelt nach festem Zeitplan Marktwerte, Punkte, Aufstellungen, Prognosen, Verletzungen,
-  Meldungen und Liga-Transfers und schickt Telegram-Nachrichten. Zeitplan: [`docs/plan.md`](docs/plan.md).
-- **Zugriff wählbar:** lokal auf Loopback, Caddy mit Standard-HTTPS, eigener Reverse Proxy oder
-  optional IONOS DNS-01. VPN und DNS-Anbieter sind Teil der eigenen Infrastruktur.
-- Der Kickbase-Client erlaubt ausschließlich `GET` und den Login – jede andere Methode wirft eine Exception.
+Alle Seiten im Detail: [docs/features.md](docs/features.md).
 
 ## Schnellstart
 
@@ -145,7 +98,33 @@ ab. Er speichert Secrets lokal, erzeugt die nötigen Schlüssel und überschreib
 Einrichtung. Danach **http://localhost:8080** öffnen. Alternativ mit Python 3.12 und `uv`:
 `uv run python scripts/setup.py`, anschließend `docker compose up -d --build`.
 
-Für Server/Handy/PWA den passenden Zugriff in `.env` wählen:
+Details, Zugriffsvarianten und die Übernahme vorhandener Installationen:
+**[docs/self-hosting.md](docs/self-hosting.md)**.
+
+## Wie die Empfehlungen entstehen
+
+Jeder Score (0–100) zeigt seine Bestandteile mit Gewicht und Begründung – nichts ist eine Blackbox.
+
+| Bestandteil | Was er misst |
+|---|---|
+| **Form** | Punkte der letzten 5 Spieltage (neuere zählen mehr), als Rang in der Position |
+| **Trend** | Marktwert-Änderung der letzten 7 Tage |
+| **Programm** | Stärke der nächsten 3 Gegner, Heim/Auswärts |
+| **Einsatz** | Startchance: LigaInsider-Prognose, Verletzungen, Startquote der letzten Vereinsspiele |
+| **Klasse** | Marktwert-Rang in der Position plus Saison-Ø – damit ein Top-Spieler nach einer schwachen Woche nicht unter Mittelmaß fällt |
+| **Status** | Abzug für angeschlagen, Aufbautraining, verletzt/gesperrt |
+
+Kaufen, Verkaufen und Beste Elf gewichten die Bestandteile unterschiedlich. Alle Gewichte
+stehen in [`config/scoring.yaml`](config/scoring.yaml) und werden auf den Seiten angezeigt.
+
+Der **Aufstellungsindex** (0–100 je Spieler) ergänzt den Score: Startchance × positionsbezogener
+Formrang × Programm der nächsten Gegner. Er ist eine relative Kennzahl – tatsächliche
+Kickbase-Punkte oder Wahrscheinlichkeiten werden damit nicht vorhergesagt. Fehlende Daten werden
+im Ergebnis kenntlich gemacht.
+
+## Betrieb und Konfiguration
+
+Für Server, Handy und PWA den passenden Zugriff in `.env` wählen:
 
 | Variante | Compose-Ergänzung | Voraussetzung |
 |---|---|---|
@@ -154,55 +133,41 @@ Für Server/Handy/PWA den passenden Zugriff in `.env` wählen:
 | Eigener TLS-Proxy | `compose.external.yaml` | vorhandener Reverse Proxy; App nur auf Loopback |
 | IONOS DNS-01 | `compose.ionos.yaml` | optionales IONOS-Token; auch für rein interne Hosts |
 
-**[Einrichtung, Varianten und Übernahme vorhandener Installationen](docs/self-hosting.md)**.
-Telegram und KI bleiben optional; ohne ihre Keys läuft das Dashboard weiter. Die
-**experimentelle** Claude-Bridge (`compose.claude.yaml`) nutzt die Claude Code CLI des Hosts –
-ob das mit dem eigenen Claude-Tarif vereinbar ist, bitte selbst prüfen.
-
-## Konfiguration
+Telegram und KI bleiben optional. Die **experimentelle** Claude-Bridge (`compose.claude.yaml`)
+nutzt die Claude Code CLI des Hosts – ob das mit dem eigenen Claude-Tarif vereinbar ist, bitte
+selbst prüfen.
 
 | Datei | Wofür |
 |---|---|
 | `.env` | Zugriffsvariante, Secret-Pfade, Liga, Zeitzone, Login und optionale Integrationen |
-| [`config/scoring.yaml`](config/scoring.yaml) | Score-Gewichte, Gebotsempfehlung, Verkaufs-Guide, Trading-Schwellen und Deadline-Puffer |
+| [`config/scoring.yaml`](config/scoring.yaml) | Score-Gewichte, Gebotsempfehlung, Verkaufs-Guide, Trading-Schwellen, Deadline-Puffer |
 | [`config/ai.yaml`](config/ai.yaml) | harte KI-Grenzen: Aufrufe, Tokens, Budget pro Tag/Monat |
 | [`config/notifications.yaml`](config/notifications.yaml) | Schwellen für Telegram-Meldungen |
-| [`config/ligainsider.yaml`](config/ligainsider.yaml) | Zuordnung LigaInsider-Seiten → Vereine |
-| [`config/team_mapping.yaml`](config/team_mapping.yaml) | Zuordnung OpenLigaDB → Kickbase-Vereine |
+| [`config/ligainsider.yaml`](config/ligainsider.yaml), [`config/team_mapping.yaml`](config/team_mapping.yaml) | Zuordnung der Datenquellen zu Kickbase-Vereinen |
 
-## Entwicklung
+## Architektur
 
-```bash
-uv sync                                   # Abhängigkeiten
-uv run ruff check . && uv run ruff format --check .
-uv run pytest -n auto                     # Tests (parallel) mit gespeicherten Fixtures, nie gegen Live-APIs
-uv run alembic upgrade head               # Migrationen
+```mermaid
+flowchart LR
+  phone["📱 Handy / Browser"] --> proxy["Optional: Caddy oder eigener TLS-Proxy"]
+  phone -- localhost / SSH-Tunnel --> app
+  proxy --> app["app<br/>FastAPI + HTMX"]
+  app --> db[("PostgreSQL 16")]
+  worker["worker<br/>APScheduler"] --> db
+  worker -- Telegram --> phone
+  app -. nur GET .-> kb["Kickbase API"]
+  worker -. nur GET .-> kb
+  worker --> oldb["OpenLigaDB"]
+  worker --> li["LigaInsider"]
+  worker --> kicker["kicker RSS"]
+  worker -. optional .-> llm["Mistral"]
 ```
-
-- Tests laufen gegen anonymisierte Fixtures unter `tests/fixtures/` (Kickbase, LigaInsider);
-  Postgres-Tests zusätzlich mit `TEST_POSTGRES_URL`.
-- Mobile Screenshots und Prüfung auf horizontales Scrollen: `scripts/screenshot.py --base URL`;
-  Ausgabe lokal unter `artifacts/screenshots/` (gitignored). Live-Screenshots mit privaten
-  Liga- und Kontodaten gehören nicht ins Repository.
-- README-Screenshots aus synthetischen Daten (ohne Kickbase-Zugang) neu erzeugen:
-  ```bash
-  uv run python -m scripts.demo_server &    # Port 8099, Passwort „demo“
-  uv run --with playwright python scripts/readme_screenshots.py
-  ```
-  Das Ergebnis landet in `docs/images/demo/`; nur dieser Ordner und das Banner dürfen Bilder
-  enthalten (`scripts/check_public_tree.py`).
-- Arbeitsweise, Regeln und Übergaben zwischen Agenten: [`AGENTS.md`](AGENTS.md),
-  aktueller Stand in [`HANDOFF.md`](HANDOFF.md), Ausbauplan in [`docs/roadmap.md`](docs/roadmap.md).
-  Was davon nur zum Ablauf des Maintainers gehört: [`docs/maintainer/`](docs/maintainer/README.md).
-
-```
-app/
-  kickbase/     Client (nur lesend), Cache, Modelle      lineups/   LigaInsider, Startelf-Prognosen
-  services/     Scores, Empfehlungen, Guide, Briefing    bot/       Telegram-Fragen (Lagebild, Werkzeuge)
-  worker/       Sammeljobs und Zeitplan                  llm/       Mistral mit harten Limits
-  web/          Routen, Templates, CSS, PWA              news/      kicker-Meldungen
-config/  docs/  scripts/  tests/  alembic/  docker/
-```
+- **app** rendert die Seiten (Jinja2 + HTMX, Chart.js) mit eigenem Login.
+- **worker** sammelt nach festem Zeitplan Marktwerte, Punkte, Aufstellungen, Prognosen,
+  Verletzungen, Meldungen und Liga-Transfers und schickt Telegram-Nachrichten
+  (Zeitplan: [`docs/plan.md`](docs/plan.md)).
+- **Zugriff wählbar:** lokal auf Loopback, Caddy mit Standard-HTTPS, eigener Reverse Proxy oder
+  optional IONOS DNS-01. VPN und DNS-Anbieter sind Teil der eigenen Infrastruktur.
 
 ## Datenquellen und Spielregeln
 
@@ -219,15 +184,24 @@ Drittanbieter-Webseiten in öffentliche Issues, PRs oder Screenshots übernehmen
 Quelle aus oder ändert sich eine Seite, zeigt die App das sichtbar an, statt alte Daten
 als aktuell auszugeben.
 
-Wer das Projekt selbst betreibt, ruft diese Dienste mit der eigenen Installation ab und ist
-selbst dafür verantwortlich, deren Nutzungsbedingungen einzuhalten. Die eingebauten Grenzen
-(Abstände, Zeitfenster, Caches) bitte nicht lockern.
+Wer das Projekt betreibt, ist selbst für die Nutzungsbedingungen dieser Dienste verantwortlich;
+die eingebauten Grenzen (Abstände, Zeitfenster, Caches) bitte nicht lockern.
 
-## Sicherheit und Drittanbieter
+## Entwicklung und Beiträge
+
+```bash
+uv sync                                   # Abhängigkeiten
+uv run ruff check . && uv run ruff format --check .
+uv run pytest -n auto                     # Tests mit gespeicherten Fixtures, nie gegen Live-APIs
+```
+
+Beiträge sind willkommen: [CONTRIBUTING.md](CONTRIBUTING.md) und
+[Verhaltenskodex](CODE_OF_CONDUCT.md). Projektstruktur, Tests, Screenshots und Arbeitsweise:
+[docs/development.md](docs/development.md).
+
+## Sicherheit und Lizenz
 
 Sicherheitsmeldungen: [SECURITY.md](SECURITY.md). Herkunft und Lizenztexte der eingebundenen
 Bibliotheken und API-Spezifikation: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
-Der eigene Projektcode steht unter der [MIT-Lizenz](LICENSE). Beiträge: [CONTRIBUTING.md](CONTRIBUTING.md)
-und [Verhaltenskodex](CODE_OF_CONDUCT.md).
-Der Veröffentlichungscheck samt Grenzen der historischen Bereinigung steht in
-[docs/publication.md](docs/publication.md).
+Der eigene Projektcode steht unter der [MIT-Lizenz](LICENSE). Der Veröffentlichungscheck samt
+Grenzen der historischen Bereinigung steht in [docs/publication.md](docs/publication.md).
