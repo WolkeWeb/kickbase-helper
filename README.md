@@ -25,8 +25,34 @@
 
 ---
 
+## So sieht es aus
+
+<table align="center">
+  <tr>
+    <td align="center"><img src="docs/images/demo/app-heute.png" alt="Heute: Budget, Teamwert und die wichtigsten To-dos vor der Deadline" width="170"></td>
+    <td align="center"><img src="docs/images/demo/app-beste-elf.png" alt="Beste Elf: stärkste Aufstellung nach Aufstellungsindex" width="170"></td>
+    <td align="center"><img src="docs/images/demo/app-kaufen.png" alt="Kaufen: Marktangebote mit Score und Gebotsempfehlung" width="170"></td>
+    <td align="center"><img src="docs/images/demo/app-verkaufen.png" alt="Verkaufen: Spieler mit Marktwertrückgang oder unsicherem Einsatz" width="170"></td>
+    <td align="center"><img src="docs/images/demo/app-spieler.png" alt="Spielerseite: Halten oder verkaufen mit Score und Gründen" width="170"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><b>Heute</b><br>To-dos vor der Deadline</sub></td>
+    <td align="center"><sub><b>Beste Elf</b><br>nach Aufstellungsindex</sub></td>
+    <td align="center"><sub><b>Kaufen</b><br>Score &amp; Gebotstipp</sub></td>
+    <td align="center"><sub><b>Verkaufen</b><br>mit Begründung</sub></td>
+    <td align="center"><sub><b>Spieler</b><br>Halten oder verkaufen?</sub></td>
+  </tr>
+</table>
+
+<p align="center"><sub>
+  Die Aufnahmen entstehen aus den anonymisierten Test-Fixtures und frei erfundenen Marktwerten
+  („Testliga“) – keine echten Konto-, Liga- oder Managerdaten.
+  So lassen sie sich selbst erzeugen: <a href="#entwicklung">Entwicklung</a>.
+</sub></p>
+
 ## Inhalt
 
+- [So sieht es aus](#so-sieht-es-aus)
 - [Was es kann](#was-es-kann)
 - [Wie die Empfehlungen entstehen](#wie-die-empfehlungen-entstehen)
 - [Architektur](#architektur)
@@ -53,7 +79,6 @@
 | **Telegram** | Meldungen zu eigenen Spielern, Warnung ~2 h vor der Deadline, Morgen-Briefing – und Fragen an das Dashboard („Wen soll ich verkaufen?“), beantwortet nur aus den eigenen Daten. **Spieltags-Bilanz** nach Abpfiff (Punkte, Platz-Änderung, Top/Flop, verpasste Punkte); dieselbe Bilanz steht im Lagebild des Bots und auf der Team-Seite. **Merkliste** (`/merkliste`): Alarme, wenn ein beobachteter Spieler auf den Markt kommt, sein Preis eine Schwelle (`price_below`) unterschreitet, sich sein Status ändert oder er aus der LigaInsider-Prognose-Elf fällt; dieselben Spieler stehen im Lagebild des Bots. **Gebote auf eigene Spieler**: Alarm, sobald ein anderer Liga-Manager einen meiner gelisteten Spieler über Marktwert überbietet; dieselben Listings stehen ebenfalls im Lagebild des Bots (ohne Bietername). |
 
 Auf dem Handy gebaut (375 px, Dark Mode, PWA fürs Homescreen-Icon), ab 900 px zweispaltig.
-Live-Screenshots mit privaten Liga- und Kontodaten gehören nicht ins Repository.
 
 ## Wie die Empfehlungen entstehen
 
@@ -157,7 +182,15 @@ uv run alembic upgrade head               # Migrationen
 - Tests laufen gegen anonymisierte Fixtures unter `tests/fixtures/` (Kickbase, LigaInsider);
   Postgres-Tests zusätzlich mit `TEST_POSTGRES_URL`.
 - Mobile Screenshots und Prüfung auf horizontales Scrollen: `scripts/screenshot.py --base URL`;
-  Ausgabe lokal unter `artifacts/screenshots/` (gitignored).
+  Ausgabe lokal unter `artifacts/screenshots/` (gitignored). Live-Screenshots mit privaten
+  Liga- und Kontodaten gehören nicht ins Repository.
+- README-Screenshots aus synthetischen Daten (ohne Kickbase-Zugang) neu erzeugen:
+  ```bash
+  uv run python -m scripts.demo_server &    # Port 8099, Passwort „demo“
+  uv run --with playwright python scripts/readme_screenshots.py
+  ```
+  Das Ergebnis landet in `docs/images/demo/`; nur dieser Ordner und das Banner dürfen Bilder
+  enthalten (`scripts/check_public_tree.py`).
 - Arbeitsweise, Regeln und Übergaben zwischen Agenten: [`AGENTS.md`](AGENTS.md),
   aktueller Stand in [`HANDOFF.md`](HANDOFF.md), Ausbauplan in [`docs/roadmap.md`](docs/roadmap.md).
   Was davon nur zum Ablauf des Maintainers gehört: [`docs/maintainer/`](docs/maintainer/README.md).

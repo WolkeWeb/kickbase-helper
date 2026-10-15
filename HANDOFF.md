@@ -9,6 +9,10 @@ Phasen 1–7b und die Erweiterungen bis C20 sind umgesetzt; Details in `docs/roa
 
 ## Aktueller Stand
 
+- README-Screenshots im iPhone-Rahmen aus synthetischen Daten: `scripts/demo_server.py` +
+  `demo_data.py` (Test-Fixtures, erfundene Marktwerte), `scripts/readme_screenshots.py`;
+  Bilder nur unter `docs/images/demo/` (`check_public_tree.py` erlaubt nur diesen Ordner).
+  Merge-Ziel ist das öffentliche Repo `WolkeWeb/kickbase-helper` (origin geprüft).
 - Systemprüfung: lokales `COMPOSE_FILE` um `compose.claude.yaml` ergänzt; Bridge/MCP
   wieder beidseitig erreichbar, HTTPS und letzte Worker-Jobs ok, DB auf 0015.
   Setup weist mehrdeutige Backslashes vor Dateierzeugung ab; Update-Doku ergänzt.

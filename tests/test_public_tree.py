@@ -13,6 +13,8 @@ from scripts.check_public_tree import private_path
         "artifacts/capture.png",
         "docs/screenshots/old.png",
         "docs/images/team.png",
+        "docs/images/demo/nested/team.png",
+        "docs/images/demo/notes.txt",
         "backup.sql.gz",
         "private.PEM",
         "backup.bundle",
@@ -28,6 +30,7 @@ def test_private_artifacts_are_blocked_even_when_force_added(name):
     [
         ".env.example",
         "docs/images/banner.png",
+        "docs/images/demo/app-heute.png",
         "app/secret_files.py",
         "app/web/static/icons/icon-192.png",
         "tests/fixtures/kickbase/user_me.json",
