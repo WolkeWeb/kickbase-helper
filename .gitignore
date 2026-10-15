@@ -30,6 +30,8 @@ artifacts/
 docs/screenshots/
 docs/images/*.png
 !docs/images/banner.png
+!docs/images/demo/
+!docs/images/demo/*.png
 *.log
 *.sql
 *.sql.gz

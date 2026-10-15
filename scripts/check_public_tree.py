@@ -23,6 +23,14 @@ PRIVATE_SUFFIXES = {
 PRIVATE_DIRS = {"secrets", "artifacts", ".agent-logs", "node_modules", ".venv"}
 
 
+def public_image(name: str) -> bool:
+    """Banner and the README demo screenshots (synthetic, see readme_screenshots.py)."""
+    path = PurePosixPath(name)
+    return name == "docs/images/banner.png" or (
+        path.parent == PurePosixPath("docs/images/demo") and path.suffix == ".png"
+    )
+
+
 def private_path(name: str) -> bool:
     path = PurePosixPath(name)
     return (
@@ -31,7 +39,7 @@ def private_path(name: str) -> bool:
         or path.suffix.lower() in PRIVATE_SUFFIXES
         or name.endswith(".sql.gz")
         or name.startswith("docs/screenshots/")
-        or (name.startswith("docs/images/") and name != "docs/images/banner.png")
+        or (name.startswith("docs/images/") and not public_image(name))
     )
 
 
