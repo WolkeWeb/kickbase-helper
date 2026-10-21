@@ -171,6 +171,9 @@ async def test_best_buy_skips_players_already_bid_on(fake, sessions):
     fake.on("GET", f"/v4/leagues/{TEAM_LEAGUE_ID}/market", market)
     view = await load(fake, sessions)
     assert view.best_buy is not None and view.best_buy.player.id != top
+    # The briefing's buy list follows the same rule.
+    assert view.buys[0] is view.best_buy
+    assert top not in {r.player.id for r in view.buys}
 
 
 async def test_ended_bids_are_not_open(fake, sessions):
