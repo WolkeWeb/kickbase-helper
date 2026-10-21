@@ -1,6 +1,6 @@
 # HANDOFF.md
 
-Aktiver Agent: Claude Code (/auftrag) + opencode
+Aktiver Agent: opencode (Review + Fixes)
 
 ## Ziel und Stand
 
@@ -9,9 +9,19 @@ Phasen 1–7b und die Erweiterungen bis C20 sind umgesetzt; Details in `docs/roa
 
 ## Aktueller Stand
 
+- Review-Findings für C21 behoben (siehe Commit „C21.5 Review-Fixes" auf
+  `feat/c21-deadline-plan`): Worker-Job `deadline_plan_reminder` fängt jetzt Kickbase-
+  Ausfälle breit ab (`except Exception` analog zur Backfill-Konvention), loggt Typ+Detail
+  und gibt einen Status mit Exception-Namen zurück; dadurch crasht der stündliche
+  Scheduler bei einem API-Blip nicht mehr. `ctx.league.get()` wird nur noch einmal
+  aufgerufen, irreführender Kommentar „single Kickbase round trip" → „vier gecachte
+  Abrufe – Markt, Kader, Aufstellung, Budget – keine neuen Endpunkte" korrigiert, neue
+  Doku-Zeile auf `_DEFICIT_BUCKET_EUR` (Integer-Floor-Rundung verhindert Aufwärts-
+  Verschiebung an der Bucketgrenze). Neuer Test
+  `test_reminder_skips_quietly_on_kickbase_failure` deckt das Ausfall-Szenario ab.
 - C21.4 Doku: C21 in `docs/roadmap.md` als umgesetzt 21.10.2026 markiert (Tabellenzeile,
   Last-Budget, Detailabsatz, Folgevorschläge jetzt nur noch C22 + C15), eigene Zeile
-  „Deadline-Plan“ in `docs/features.md` plus Telegram-Erinnerung dort verlinkt,
+  „Deadline-Plan" in `docs/features.md` plus Telegram-Erinnerung dort verlinkt,
   `close_hours`/`safety_hours` in `config/scoring.yaml` kommentiert. Keine neue
   Umgebungsvariable (Zustand im Key-Value-Speicher, Telegram wie bisher über `secrets/`).
 - C21.1–C21.3 Deadline-Plan: reine Planlogik `build_deadline_plan` (`app/services/deadline_plan.py`,

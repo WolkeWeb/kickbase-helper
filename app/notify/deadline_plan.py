@@ -35,6 +35,8 @@ SOLVED_PREFIX = "solved:"
 DEFICIT_PREFIX = "deficit:"
 # Coarse bucket so a small day-to-day budget swing does not fire a fresh alarm for
 # essentially the same situation (~0.25 Mio. – below Kickbase's smallest listable sale).
+# Integer floor division (`//`) so a deficit just below the bucket boundary stays in the
+# lower bucket instead of leaking into the next one and triggering a fresh alarm.
 _DEFICIT_BUCKET_EUR = 250_000
 
 

@@ -770,12 +770,12 @@ DEADLINE_RISK_THRESHOLD = RISK_THRESHOLD
 async def deadline_plan_reminder(ctx: JobContext) -> str:
     """Telegram reminder while the deadline plan shows an open deficit (Block C, C21.3).
 
-    Reuses the C21.2 `deadline_plan_view` loader (single Kickbase round trip, no fresh
-    endpoints). Fires at most once per (deadline, deficit bucket, recommended sales)
-    fingerprint; a solved deficit clears the fingerprint and a future deficit with the same
-    numbers still triggers a fresh alarm. Outside the close-hours window or with no Telegram
-    it bails out early – the job is cheap to skip and runs hourly, so a stale Telegram
-    config must not burst the API."""
+    Reuses the C21.2 `deadline_plan_view` loader (vier gecachte Abrufe – Markt, Kader, Aufst
+    ellung, Budget – keine neuen Endpunkte). Fires at most once per (deadline, deficit bucket,
+    recommended sales) fingerprint; a solved deficit clears the fingerprint and a future deficit
+    with the same numbers still triggers a fresh alarm. Outside the close-hours window or with
+    no Telegram it bails out early – the job is cheap to skip and runs hourly, so a stale
+    Telegram config must not burst the API."""
     from app.notify.deadline_plan import commit_reminder, compose_reminder, should_remind
     from app.services.deadline_plan import deadline_plan_view
 
@@ -785,8 +785,16 @@ async def deadline_plan_reminder(ctx: JobContext) -> str:
     if not rule.enabled:
         return "Benachrichtigungen aus (Deadline-Plan-Alarm aus)"
 
+    league = await ctx.league.get()
     now = ctx.clock()
-    view = await deadline_plan_view(ctx.client, ctx.sessions, await ctx.league.get(), now=now)
+    try:
+        view = await deadline_plan_view(ctx.client, ctx.sessions, league, now=now)
+    except Exception as exc:
+        # Kickbase blip / timeout / parser error → skip this run, leave the previous
+        # fingerprint untouched, retry on the next hourly tick. Broad catch on purpose:
+        # one flaky endpoint must not crash the hourly scheduler.
+        logger.warning("Deadline-Plan-Reminder übersprungen: %s: %s", type(exc).__name__, exc)
+        return f"Deadline-Plan: Kader nicht ladbar ({type(exc).__name__})"
     if view is None:
         return "Deadline-Plan: Kader nicht ladbar"
     plan = view.plan
@@ -810,7 +818,7 @@ async def deadline_plan_reminder(ctx: JobContext) -> str:
     if not await should_remind(ctx.kv, key):
         return "für diese Situation schon gemeldet"
 
-    reminder = compose_reminder(view, (await ctx.league.get()).name, ctx.tz, ctx.public_url)
+    reminder = compose_reminder(view, league.name, ctx.tz, ctx.public_url)
     if reminder is None:  # defensive: situation_key said deficit but compose had nothing to say
         return "kein Reminder-Text"
     await ctx.notifier.send(reminder.text)

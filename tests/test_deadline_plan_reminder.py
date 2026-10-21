@@ -460,3 +460,22 @@ async def test_reminder_failed_send_keeps_no_state(ctx):
     ctx.telegram.fail = False
     assert await deadline_plan_reminder(ctx) == "Deadline-Plan erinnert"
     assert len(ctx.telegram.texts) == 1
+
+
+async def test_reminder_skips_quietly_on_kickbase_failure(ctx):
+    """A temporary Kickbase outage must not crash the hourly worker. The job returns a
+    readable status, commits no fingerprint, and the next run retries with the same
+    numbers."""
+    # Squad endpoint raises – simulates a network blip while the squad endpoint is hit.
+    # The client wraps the underlying httpx error in `KickbaseUnavailable` after retry.
+    ctx.fake.on("GET", f"/v4/leagues/{TEAM_LEAGUE_ID}/squad", httpx.ConnectError("kaboom"))
+    _set_market(ctx, deadline_in=timedelta(hours=12), budget=-10_000_000)
+    from app.worker.jobs import deadline_plan_reminder
+
+    summary = await deadline_plan_reminder(ctx)
+    assert summary.startswith("Deadline-Plan: Kader nicht ladbar")
+    # The wrapped error name surfaces in the status so the next run has something to grep.
+    assert "KickbaseUnavailable" in summary
+    # No state advance – the next run with a healthy API still has a clean slate.
+    assert await ctx.kv.get(FINGERPRINT_KEY) is None
+    assert ctx.telegram.texts == []
