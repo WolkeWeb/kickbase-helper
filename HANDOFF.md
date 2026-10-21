@@ -9,29 +9,18 @@ Phasen 1–7b und die Erweiterungen bis C20 sind umgesetzt; Details in `docs/roa
 
 ## Aktueller Stand
 
-- C21.3 Erinnerung: Worker-Job `deadline_plan_reminder` in `app/worker/jobs.py`,
-  Cron `hour="7-23", minute=0` in `app/worker/main.py`, Schalter `deadline_plan:`
-  in `config/notifications.yaml` und Modell `DeadlinePlanRule` in `app/notify/events.py`.
-  Fingerabdruck (`app/notify/deadline_plan.situation_key`) aus stabiler Spieler-ID (oder Name
-  als Fallback), Deadline und 250-k€-Bucket; solved→deficit-Reentry meldet erneut.
-  Frühe Bails: kein Telegram, Regel aus, keine Deadline, außerhalb Close-Fenster, gelöstes
-  Defizit (committed baseline, keine Nachricht). `test_schedule` und 21 Fälle in
-  `test_deadline_plan_reminder.py` grün, Worker-Test 62 grün.
-- C21.2 Laden + Anzeige: `deadline_plan_view(...)` in `app/services/deadline_plan.py` zieht
-  Squad/Budget/Markt/MyEleven über vorhandene Caches (401-Re-Login, Stale-Markierung),
-  `holding_roles` für Schutz-IDs, `_pick_deadline` schluckt vergangene Fristen. Route
-  `/deadline_plan` in `app/web/routes/pages.py` (HTMX-Redirect, `_guarded` für Ausfälle).
-  Karte unter Heute in `partials/team.html`, partial `partials/deadline_plan.html`
-  (Finanzierung, geschützte Stammspieler, Schritte, Stale-Hinweis). Tests in
-  `test_deadline_plan_view.py` und `test_deadline_plan_route.py` grün (28 Fälle).
-- C21.1 reine Planlogik in `app/services/deadline_plan.py` (`build_deadline_plan` → `DeadlinePlan`):
-  echte Deadline, `sell_by = deadline − trading.safety_hours`, konservative Reserve aus
-  `pending_offers_budget` und eigenen Geboten (höherer Wert wie in `transfer_simulation`),
-  eigene Gebote pro Spieler einmal gezählt, freie Kaderplätze (beste Formation), geschützte
-  Spieler (C17 `holding_roles`) aus `build_sell_guide` ausgenommen. Rückwärtsplan aus datierten
-  `PlanStep`s: Verkäufe bis `sell_by`, Elf/Gebote bis Deadline. Liegt `sell_by` in der
-  Vergangenheit (Englische Woche / kurze Frist) fällt der Zeitplan weg, Hinweis ersetzt ihn.
-  Defizit bleibt sichtbar, wenn nur geschützte Stammspieler es decken könnten.
+- C21.4 Doku: C21 in `docs/roadmap.md` als umgesetzt 21.10.2026 markiert (Tabellenzeile,
+  Last-Budget, Detailabsatz, Folgevorschläge jetzt nur noch C22 + C15), eigene Zeile
+  „Deadline-Plan“ in `docs/features.md` plus Telegram-Erinnerung dort verlinkt,
+  `close_hours`/`safety_hours` in `config/scoring.yaml` kommentiert. Keine neue
+  Umgebungsvariable (Zustand im Key-Value-Speicher, Telegram wie bisher über `secrets/`).
+- C21.1–C21.3 Deadline-Plan: reine Planlogik `build_deadline_plan` (`app/services/deadline_plan.py`,
+  `sell_by` = Deadline − `trading.safety_hours`, konservative Reserve, `holding_roles`-Schutz,
+  datierte `PlanStep`s), Anzeige als Karte auf der Teamseite (`deadline_plan_view`, vorhandene
+  Caches, Stale-Markierung) und Telegram-Erinnerung als Worker-Job `deadline_plan_reminder`
+  (Cron 7–23 Uhr, Schalter `deadline_plan:` in `config/notifications.yaml`, Fingerabdruck aus
+  Deadline/Defizit-Bucket/Verkaufsliste, solved→deficit meldet erneut). Offen: nur PR + Review +
+  Merge + Deploy.
 - Morgen-Briefing neu (`app/services/briefing.py`): statt Kader-JSON fertige Fakten mit id
   aus `today_view` (neu: `buys`, optional `basis`), Kaufliste, Verkauf, Meldungen, Teamwert.
   KI-Zeilen nennen ihre Fakten; Zahlen/Spieler/Handlungen werden je Zeile geprüft, sonst
@@ -45,17 +34,6 @@ Phasen 1–7b und die Erweiterungen bis C20 sind umgesetzt; Details in `docs/roa
   `demo_data.py` (Test-Fixtures, erfundene Marktwerte), `scripts/readme_screenshots.py`;
   Bilder nur unter `docs/images/demo/` (`check_public_tree.py` erlaubt nur diesen Ordner).
   Merge-Ziel ist das öffentliche Repo `WolkeWeb/kickbase-helper` (origin geprüft).
-- Systemprüfung: lokales `COMPOSE_FILE` um `compose.claude.yaml` ergänzt; Bridge/MCP
-  wieder beidseitig erreichbar, HTTPS und letzte Worker-Jobs ok, DB auf 0015.
-  Setup weist mehrdeutige Backslashes vor Dateierzeugung ab; Update-Doku ergänzt.
-  1372 Tests grün (1 Skip), SQLite + isoliertes PostgreSQL, Ruff und Image-Erststart ok.
-- Öffentlicher Betrieb: README-Hinweis (inoffiziell, Sperrrisiko, ohne Gewähr, Drittanbieter-
-  Bedingungen); Worker-Port 8768 + `host.docker.internal` nur noch über `compose.claude.yaml`
-  (experimentell, in `check_deployment.py` geprüft). Maintainer-Dateien unter `docs/maintainer/`
-  und `deploy/maintainer/`, Übersicht in `docs/maintainer/README.md`.
-- Community-Dateien: `LICENSE` (MIT), `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md` (Deutsch mit
-  englischer Kurzfassung), Issue-Formulare unter `.github/ISSUE_TEMPLATE/` (Blanko-Issues aus,
-  Sicherheitsmeldungen verweisen auf private Advisories). README/publication.md angepasst.
 
 ## Plan
 
@@ -85,7 +63,7 @@ bestehenden Key-Value-Speicher wie `notify.sent`).
   `app/notify/events.py`. Nur bei aktiviertem Telegram; Nachricht nur bei relevanter Änderung
   (Fingerabdruck aus Deadline, Defizit-Stufe, Verkaufsliste) und nur mit offenem Defizit –
   gelöstes Defizit löst keinen neuen Alarm aus, erneutes Defizit schon. Tests mit Fake-Notifier.
-- [ ] C21.4 Doku: `docs/roadmap.md` C21 als umgesetzt markieren (Datum, Kurzbeschreibung,
+- [x] C21.4 Doku: `docs/roadmap.md` C21 als umgesetzt markieren (Datum, Kurzbeschreibung,
   Last-Budget), `docs/features.md` und `.env.example`/Config-Kommentare ergänzen.
 - [ ] PR öffnen, einmal reviewen, Findings fixen, CI abwarten und mergen, deployen.
 
