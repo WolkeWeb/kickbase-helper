@@ -1,6 +1,6 @@
 # HANDOFF.md
 
-Aktiver Agent: keiner (Systemprüfung nach den letzten Patches abgeschlossen)
+Aktiver Agent: Claude Code (Briefing-Fakten)
 
 ## Ziel und Stand
 
@@ -9,6 +9,10 @@ Phasen 1–7b und die Erweiterungen bis C20 sind umgesetzt; Details in `docs/roa
 
 ## Aktueller Stand
 
+- Morgen-Briefing neu (`app/services/briefing.py`): statt Kader-JSON fertige Fakten mit id
+  aus `today_view` (neu: `buys`, optional `basis`), Kaufliste, Verkauf, Meldungen, Teamwert.
+  KI-Zeilen nennen ihre Fakten; Zahlen/Spieler/Handlungen werden je Zeile geprüft, sonst
+  Fakten-Satz statt Zeile; ausgelassene wichtige Fakten werden vorangestellt.
 - README überarbeitet: „Auf einen Blick“ (Voraussetzungen, Abgrenzung), Kurzfunktionen,
   Schnellstart früh; Details in `docs/features.md` und `docs/development.md`. Screenshots mit
   prozentualer Breite, damit alle gleich groß rendern.
@@ -27,18 +31,11 @@ Phasen 1–7b und die Erweiterungen bis C20 sind umgesetzt; Details in `docs/roa
 - Community-Dateien: `LICENSE` (MIT), `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md` (Deutsch mit
   englischer Kurzfassung), Issue-Formulare unter `.github/ISSUE_TEMPLATE/` (Blanko-Issues aus,
   Sicherheitsmeldungen verweisen auf private Advisories). README/publication.md angepasst.
-- Anbieterneutraler Betrieb: vier Zugriffsvarianten, Docker-Setup ohne Secret-Ausgabe,
-  konfigurierbare Pfade/UID/GID und generische Offline-Hinweise. 1369 Tests grün (1 Skip),
-  Erststart inkl. Login und alle Compose-Modi geprüft; PR #5 nach grüner CI gemergt/deployt.
-  Bestehendes IONOS/VPN mit identischen Secret-Mounts/Volumes/Ports; App-/DB-Health ok.
-
-- Veröffentlichung 14.10.2026: neutrale Beispielkonfiguration, Caddy über `PUBLIC_URL`,
-  keine Live-Screenshots und keine vollständigen gescrapten Webseiten im Git-Stand.
-  Drittanbieter-Lizenzen und `SECURITY.md` ergänzt; Artefaktpfade werden in CI gesperrt.
-  Audit und Begründung des neuen Git-Verlaufs: `docs/publication.md`.
-  Die alte Entwicklung samt PRs, Logs und Quoten-Branch bleibt im privaten Archiv.
 
 ## Plan
+
+- [x] Morgen-Briefing: KI-Text an die Dashboard-Fakten binden (Heute-Box, Kaufliste mit Gebot,
+  exakte Tage), je Zeile prüfen statt nur global Zahlen.
 
 - [x] Letzte Patches und VM-Betrieb prüfen: bestehende Claude-Bridge wieder anbinden,
   Setup-Sonderzeichen absichern und Update-Anweisungen korrigieren.

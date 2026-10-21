@@ -80,11 +80,14 @@ Scores, sie fasst nur zusammen und zieht Fakten aus Texten.
    Kickbase-Spielern (normalisiert + Verein, Overrides in `config/player_aliases.yaml`, wird in
    Phase 7 weiterverwendet) → Hinweis auf Spieler- und Team-Seite, z. B. „laut News:
    Muskelfaserriss, ca. 3 Wochen“; betrifft es eigene Spieler, Telegram-Nachricht.
-4. **Tägliches Briefing** (Telegram, nach dem Morgen-Sammeljob): Eingabe nur unsere eigenen
-   Zahlen als kompaktes JSON (Kader mit Status und News, Budget, Top-Kaufen/-Verkaufen mit
-   Score-Bestandteilen, auslaufende Angebote) → kurzer deutscher Text, höchstens ~8 Zeilen.
-   Prüfung: jede Zahl im Text muss in der Eingabe vorkommen, sonst wird die bisherige
-   Nachricht ohne KI gesendet.
+4. **Tägliches Briefing** (Telegram, nach dem Morgen-Sammeljob): Eingabe sind fertige Fakten
+   mit id aus dem Dashboard – Deadline, „Heute“-Box (leere Plätze, Ausfallrisiken, Minus,
+   Kader-Lücken, offene Gebote), Kaufliste wie auf der Kaufen-Seite (mit Gebot und Tag des
+   Angebotsendes), Verkaufskandidaten, Meldungen/Status eigener Spieler, Teamwert über Nacht
+   (nur Info). Kein kompletter Kader mehr, damit die KI daraus keine Empfehlungen erfindet.
+   Jede KI-Zeile nennt ihre Fakten und darf nur deren Namen, Zahlen und Handlungen (kaufen,
+   verkaufen, aufstellen) nutzen; sonst ersetzen die Fakten-Sätze die Zeile. Ausgelassene
+   wichtige Fakten werden vorangestellt; ohne KI gehen die Fakten-Sätze direkt raus.
 5. **Datenschutz:** Die Gratis-Stufe darf mit Eingaben trainieren → nur Bundesliga-Daten und
    eigener Kader, nie Namen/IDs anderer Manager. Falls die Mistral-Konsole ein Training-Opt-out
    anbietet: einschalten (macht Arne).

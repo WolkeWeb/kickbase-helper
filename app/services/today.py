@@ -13,6 +13,7 @@ from app.lineups.service import InjuryNote, TeamPrediction, prediction_for
 from app.openligadb.client import OpenLigaDbClient
 from app.services.players import StartQuote, compute_start_probability
 from app.services.recommendations import (
+    Basis,
     BuyFilters,
     Recommendation,
     buy_view,
@@ -95,6 +96,8 @@ class TodayView:
     matchday: int | None
     items: list[TodayItem] = field(default_factory=list)
     best_buy: Recommendation | None = None
+    # The buy list as the buy page shows it by default, without offers the user already bid on.
+    buys: tuple[Recommendation, ...] = ()
     bid_hint: str | None = None  # why the bid advice may be missing or not current
     notes: list[str] = field(default_factory=list)  # informational data hints
     warnings: list[str] = field(default_factory=list)  # failed/outdated sources: always shown
@@ -131,9 +134,10 @@ async def today_view(
     sessions: async_sessionmaker,
     league: ResolvedLeague,
     now: datetime | None = None,
+    basis: Basis | None = None,
 ) -> TodayView:
     now = now or datetime.now(UTC)
-    basis = await load_basis(client, oldb, sessions, league, now)
+    basis = basis or await load_basis(client, oldb, sessions, league, now)
     bids = await load_bid_status(sessions, league.id, now, basis.config.bids)
     buys = await buy_view(client, sessions, league, basis, bids.model, bids.hint, now)
     market_fetched = await client.market(league.id)
@@ -224,13 +228,14 @@ async def today_view(
     # The best offer the user hasn't bid on yet (a bid is already "done").
     bid_on = {p.id for p in mine}
     shown, _ = select_buys(buys, BuyFilters())
-    best = next((r for r in shown if r.player.id not in bid_on), None)
+    open_buys = tuple(r for r in shown if r.player.id not in bid_on)
     return TodayView(
         now=now,
         deadline=buys.deadline,
         matchday=market.next_matchday,
         items=items,
-        best_buy=best,
+        best_buy=open_buys[0] if open_buys else None,
+        buys=open_buys,
         bid_hint=buys.bid_hint,
         notes=list(basis.notes),
         warnings=list(basis.warnings),

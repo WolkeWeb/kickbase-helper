@@ -14,6 +14,8 @@ from app.notify.telegram import TelegramNotifier
 from app.services.briefing import (
     Briefing,
     BriefingData,
+    Fact,
+    _day,
     collect_briefing_data,
     compose_briefing,
     unknown_numbers,
@@ -51,15 +53,35 @@ async def sessions(tmp_path):
     await engine.dispose()
 
 
-DATA = BriefingData(
-    {
-        "budget": "3,72 Mio.",
-        "kaufempfehlungen": [{"name": "Kane", "preis": "5,6 Mio.", "bestandteile": "Form +20"}],
-        "kader": [{"name": "Musiala", "trend_7_tage": "−8,3 %"}],
-    },
-    ("Budget: 3,72 Mio.", "Kaufen: Kane (5,6 Mio., Score 71)"),
-    ("Programm zählt neutral.",),
+FACTS = (
+    Fact("spieltag", "Aufstellung für Spieltag 7 bis Fr. 9.10. 20:30 (noch 3 Tage 14 Std.)"),
+    Fact(
+        "heute_1",
+        "Musiala: Startchance 30 % – angeschlagen",
+        important=True,
+        actions=frozenset({"aufstellen"}),
+    ),
+    Fact("konto", "Kontostand 3,72 Mio."),
+    Fact(
+        "kauf_1",
+        "Kaufempfehlung 1: Harry Kane (Bayern, ST), Preis 5,6 Mio., Score 71, "
+        "Angebot endet morgen 20:26",
+        "Score-Bestandteile: Form +20",
+    ),
+    Fact(
+        "kauf_2",
+        "Kaufempfehlung 2: Leon Goretzka (Bayern, MF), Preis 4,1 Mio., Score 50, "
+        "Angebot endet heute 22:59",
+    ),
+    Fact(
+        "marktwerte",
+        "Teamwert seit gestern +1,49 Mio.; größter Anstieg Conté +270 Tsd.",
+        info_only=True,
+    ),
 )
+NAMES = frozenset({"Musiala", "Kane", "Harry Kane", "Goretzka", "Leon Goretzka", "Conté", "Wirtz"})
+DATA = BriefingData("Dienstag, 6.10.", FACTS, NAMES, ("Programm zählt neutral.",))
+SOURCE = "Kontostand 3,72 Mio.; Kane 5,6 Mio., Form +20; Musiala −8,3 %"
 
 
 @pytest.mark.parametrize(
@@ -76,34 +98,106 @@ DATA = BriefingData(
     ],
 )
 def test_unknown_numbers(text, unknown):
-    assert unknown_numbers(text, DATA.payload_json) == unknown
+    assert unknown_numbers(text, SOURCE) == unknown
+
+
+def line(text, *ids):
+    return {"punkte": list(ids), "text": text}
+
+
+async def ask(sessions, *lines):
+    llm = make_llm(sessions, fake := FakeLlm({"zeilen": list(lines)}), FakeClock(NOW))
+    briefing = await write_briefing(llm, DATA)
+    await llm.aclose()
+    return briefing, fake
 
 
 async def test_write_briefing_uses_checked_ai_text(sessions):
-    fake = FakeLlm({"zeilen": ["Kane für 5,6 Mio. kaufen.", " ", "Budget: 3,72 Mio."]})
-    llm = make_llm(sessions, fake, FakeClock(NOW))
-    briefing = await write_briefing(llm, DATA)
-    assert briefing.lines == ("Kane für 5,6 Mio. kaufen.", "Budget: 3,72 Mio.")
+    briefing, fake = await ask(
+        sessions,
+        line("Musiala wackelt (Startchance 30 %) – Aufstellung prüfen.", "heute_1", "spieltag"),
+        line("Kaufen: Kane (5,6 Mio., endet morgen 20:26).", "kauf_1", "konto"),
+        line(" ", "konto"),
+    )
+    assert briefing.lines == (
+        "Musiala wackelt (Startchance 30 %) – Aufstellung prüfen.",
+        "Kaufen: Kane (5,6 Mio., endet morgen 20:26).",
+    )
     assert briefing.by_ai
+    assert briefing.note == "KI-Text von small"
     prompt = fake.requests[0]["messages"][1]["content"]
-    assert json.loads(prompt) == DATA.payload  # the model sees exactly our data
-    await llm.aclose()
+    assert json.loads(prompt) == DATA.payload  # the model sees exactly our facts
+    assert DATA.payload["punkte"][1] == {
+        "id": "heute_1",
+        "text": "Musiala: Startchance 30 % – angeschlagen",
+        "wichtig": True,
+    }
+    assert DATA.payload["punkte"][-1]["nur_info"] is True
+
+
+@pytest.mark.parametrize(
+    ("bad", "problem"),
+    [
+        # A rising market value is no reason to sell: "verkaufen" isn't in the fact.
+        (line("Verkaufe Conté, Marktwert +270 Tsd.", "marktwerte"), "„verkaufen“ ohne Grundlage"),
+        # The day of one offer moved to another offer.
+        (line("Kaufe Goretzka bis morgen 20:26.", "kauf_2"), "Zahlen nicht im Bezug ['20', '26']"),
+        # A player from outside the referenced facts.
+        (line("Setze Wirtz statt Goretzka ein.", "kauf_2"), "Spieler nicht im Bezug ['Wirtz']"),
+        (line("Kauf Goretzka (Kaufempfehlung 2).", "kauf_7"), "ohne gültigen Bezug"),
+        # Lineup advice from a buy fact.
+        (line("Goretzka in die Startelf.", "kauf_2"), "„aufstellen“ ohne Grundlage"),
+    ],
+)
+async def test_write_briefing_replaces_lines_that_do_not_match_their_facts(sessions, bad, problem):
+    good = line("Musiala: Startchance 30 % – nicht aufstellen.", "heute_1")
+    briefing, _ = await ask(sessions, good, bad)
+    assert briefing.by_ai
+    assert briefing.lines[0] == good["text"]
+    # The plain sentences of the referenced facts instead of the bad line.
+    referenced = [f.text for f in FACTS if f.id in bad["punkte"]]
+    assert list(briefing.lines[1:]) == referenced
+    assert problem in briefing.note
+
+
+async def test_write_briefing_puts_missing_important_facts_first(sessions):
+    # The line cites the lineup risk but doesn't name the player: that doesn't count.
+    briefing, _ = await ask(
+        sessions,
+        line("Kaufen: Kane für 5,6 Mio.", "kauf_1", "heute_1"),
+    )
+    assert briefing.lines == (
+        "Musiala: Startchance 30 % – angeschlagen",
+        "Kaufen: Kane für 5,6 Mio.",
+    )
+    assert "1 wichtige(r) Punkt(e) ergänzt" in briefing.note
 
 
 @pytest.mark.parametrize(
     ("answer", "note"),
     [
-        ({"zeilen": ["Kane für 7,1 Mio. kaufen."]}, "unbekannte Zahlen: ['7,1']"),
-        ({"zeilen": []}, "keinen Text"),
+        ([line("Kane für 7,1 Mio. kaufen.", "kauf_1")], "KI-Text verworfen"),
+        ([line("Alles ruhig.")], "ohne gültigen Bezug"),
+        ([], "keinen Text"),
     ],
 )
 async def test_write_briefing_falls_back(sessions, answer, note):
-    llm = make_llm(sessions, FakeLlm(answer), FakeClock(NOW))
-    briefing = await write_briefing(llm, DATA)
+    briefing, _ = await ask(sessions, *answer)
     assert briefing.lines == DATA.fallback_lines
     assert not briefing.by_ai
     assert note in briefing.note
-    await llm.aclose()
+
+
+@pytest.mark.parametrize(
+    ("at", "text"),
+    [
+        (datetime(2026, 10, 6, 20, 59, tzinfo=UTC), "heute 22:59"),
+        (datetime(2026, 10, 6, 22, 30, tzinfo=UTC), "morgen 00:30"),
+        (datetime(2026, 10, 9, 18, 30, tzinfo=UTC), "Fr. 9.10. 20:30"),
+    ],
+)
+def test_day_names_today_and_tomorrow(at, text):
+    assert _day(at, "Europe/Berlin", NOW) == text
 
 
 def test_compose_briefing_escapes_and_adds_notes():
@@ -154,43 +248,53 @@ async def add_squad_news(sessions, published=NOW, *, updated=None, revision=1):
         )
 
 
+def facts_by_id(data):
+    return {f.id: f for f in data.facts}
+
+
 async def test_collect_briefing_data(sessions):
     await add_squad_news(sessions)
     fake = fake_with_team_data()
     add_recommendation_endpoints(fake)
     async with make_client(fake) as client, make_oldb_client(FakeOpenLigaDb()) as oldb:
         data = await collect_briefing_data(client, oldb, sessions, LEAGUE, "Europe/Berlin", NOW)
-    payload = data.payload
-    assert payload["datum"] == "6.10."
-    assert set(payload) == {
-        "datum",
-        "kontostand",
-        "nach_offenen_geboten",  # the fixture has open bids (17,01 → 8,01 Mio.)
-        "kader",
-        "kaufempfehlungen",
-        "verkaufskandidaten",
-    }
-    keeper = next(p for p in payload["kader"] if p["name"] == "Vandevoordt")
-    assert keeper["meldung"].startswith("fällt aus (Verletzung: rund drei Wochen; kicker ")
-    assert len(payload["kaufempfehlungen"]) <= 3
-    for buy in payload["kaufempfehlungen"]:
-        assert set(buy) == {
-            "name",
-            "verein",
-            "position",
-            "preis",
-            "score",
-            "bestandteile",
-            "angebot_endet",
-        }
+    assert data.payload["datum"] == "Dienstag, 6.10."
+    facts = facts_by_id(data)
+    # Deadline and the "Heute" box as on the team page; problems are important.
+    assert facts["spieltag"].text.startswith(
+        "Aufstellung für Spieltag 5 bis Fr. 9.10. 20:30 (noch "
+    )
+    assert facts["heute_1"].text.startswith("2 Plätze in der Aufstellung leer")
+    assert facts["heute_1"].important and facts["heute_1"].actions == {"aufstellen"}
+    assert any(
+        f.text.startswith("Kader-Lücke: 2× ST") and f.actions == {"kaufen"} for f in facts.values()
+    )
+    assert (
+        facts["konto"].text
+        == "Kontostand 17,01\u00a0Mio., nach allen offenen Geboten 8,01\u00a0Mio."
+    )
+    assert facts["meldung_1"].text.startswith(
+        "Meldung zu Vandevoordt (Leipzig, eigener Kader): fällt aus (Verletzung: rund drei Wochen; "
+    )
+    assert facts["meldung_1"].important
+    # The buy list as the buy page shows it: with bid advice and the exact day of the end.
+    buys = [f for f in data.facts if f.id.startswith("kauf_")]
+    assert 1 <= len(buys) <= 3
+    assert buys[0].text.startswith(
+        "Kaufempfehlung 1: Reigan Heskey (Köln, MF), Preis 500\u00a0Tsd."
+    )
+    assert "Angebot endet morgen 09:03" in buys[0].text
+    assert buys[0].detail.startswith("Score-Bestandteile: Form +")
+    assert facts["verkauf_1"].text.startswith("Verkaufskandidat 1: Hansen (Paderborn)")
+    assert facts["marktwerte"].info_only and not facts["marktwerte"].important
+    # The whole squad is no longer a fact: nothing to invent a sale from.
+    assert "Regeer" not in data.payload_json
+    assert {"Regeer", "Heskey", "Reigan Heskey"} <= data.names
     # Other managers never go to the model: not the sellers, not the league name
     # (it contains a person's name).
     assert "Manager" not in data.payload_json
     assert "Meine Liga" not in data.payload_json
-    assert data.fallback_lines[0] == (
-        "Kontostand: 17,01\u00a0Mio. (nach allen offenen Geboten 8,01\u00a0Mio.)"
-    )
-    assert any(line.startswith("Meldungen im Kader: Vandevoordt") for line in data.fallback_lines)
+    assert data.fallback_lines == tuple(f.text for f in data.facts)
 
 
 async def test_briefing_keeps_original_date_and_identifies_recent_revision(sessions):
@@ -201,9 +305,9 @@ async def test_briefing_keeps_original_date_and_identifies_recent_revision(sessi
     add_recommendation_endpoints(fake)
     async with make_client(fake) as client, make_oldb_client(FakeOpenLigaDb()) as oldb:
         data = await collect_briefing_data(client, oldb, sessions, LEAGUE, "Europe/Berlin", NOW)
-    keeper = next(p for p in data.payload["kader"] if p["name"] == "Vandevoordt")
-    assert "16.9." in keeper["meldung"]
-    assert "Änderung erkannt 06:40 · Revision 2" in keeper["meldung"]
+    news = facts_by_id(data)["meldung_1"].text
+    assert "16.9." in news
+    assert "Änderung erkannt 06:40 · Revision 2" in news
 
 
 @pytest.fixture
@@ -241,13 +345,19 @@ async def briefing_ctx(sessions):
 
 async def test_daily_briefing_once_a_day(briefing_ctx):
     ctx = briefing_ctx
-    llm = ctx.llm = make_llm(
-        ctx.sessions, FakeLlm({"zeilen": ["Heute nichts Dringendes."]}), ctx.clock
-    )
-    assert await daily_briefing(ctx) == "Briefing gesendet (KI-Text von small)"
+    answer = {"zeilen": [{"punkte": ["konto"], "text": "Kontostand 17,01 Mio."}]}
+    llm = ctx.llm = make_llm(ctx.sessions, FakeLlm(answer), ctx.clock)
+    result = await daily_briefing(ctx)
+    assert result.startswith("Briefing gesendet (KI-Text von small, ")
+    assert "wichtige(r) Punkt(e) ergänzt" in result
     assert await daily_briefing(ctx) == "Briefing heute schon gesendet"
     [text] = ctx.telegram.texts
-    assert text.startswith("<b>Briefing Testliga</b>\nHeute nichts Dringendes.\n")
+    lines = text.split("\n")
+    assert lines[0] == "<b>Briefing Testliga</b>"
+    # The important points the model left out come first (here the empty lineup slots).
+    assert lines[1].startswith("2 Plätze in der Aufstellung leer")
+    assert "Kontostand 17,01 Mio." in lines
+    assert "<i>KI-Text aus den Dashboard-Daten</i>" in text
     assert await ctx.kv.get(BRIEFING_KEY) == "2026-10-06"
     await llm.aclose()
 
@@ -257,7 +367,8 @@ async def test_daily_briefing_mentions_incomplete_news(briefing_ctx):
     await ctx.kv.set(
         EXTRACT_STATUS_KEY, {"at": NOW.isoformat(), "state": "failed", "detail": "HTTP 503"}
     )
-    llm = ctx.llm = make_llm(ctx.sessions, FakeLlm({"zeilen": ["Alles ruhig."]}), ctx.clock)
+    answer = {"zeilen": [{"punkte": ["konto"], "text": "Kontostand 17,01 Mio."}]}
+    llm = ctx.llm = make_llm(ctx.sessions, FakeLlm(answer), ctx.clock)
     await daily_briefing(ctx)
     [text] = ctx.telegram.texts
     assert "⚠️ Meldungen: Auswertung der Meldungen zuletzt fehlgeschlagen (HTTP 503)." in text
@@ -271,7 +382,7 @@ async def test_daily_briefing_falls_back_without_answer(briefing_ctx):
     result = await daily_briefing(ctx)
     assert result.startswith("Briefing gesendet (KI-Fehler: KI-Anbieter antwortet mit HTTP 503")
     [text] = ctx.telegram.texts
-    assert "\nKontostand: " in text
+    assert "\nKontostand 17,01\u00a0Mio." in text
     assert "<i>ohne KI</i>" in text
     await llm.aclose()
 
@@ -311,9 +422,11 @@ async def test_collect_briefing_data_mentions_the_sell_guide_when_in_minus(sessi
     fake.on("GET", f"/v4/leagues/{TEAM_LEAGUE_ID}/me/budget", budget)
     async with make_client(fake) as client, make_oldb_client(FakeOpenLigaDb()) as oldb:
         data = await collect_briefing_data(client, oldb, sessions, LEAGUE, "Europe/Berlin", NOW)
-    assert "im_minus" in data.payload
-    assert data.payload["im_minus"]["fehlt"]
-    assert any("Im Minus" in line for line in data.fallback_lines)
+    facts = facts_by_id(data)
+    proposal = facts["verkaufsvorschlag"]
+    assert proposal.important
+    assert proposal.text.startswith("Verkaufsvorschlag gegen das Minus (")
+    assert any(line.startswith("Im Minus: ") for line in data.fallback_lines)
 
 
 async def test_briefing_mentions_minus_only_if_bids_win(sessions):
@@ -326,9 +439,11 @@ async def test_briefing_mentions_minus_only_if_bids_win(sessions):
     fake.on("GET", f"/v4/leagues/{TEAM_LEAGUE_ID}/me/budget", budget)
     async with make_client(fake) as client, make_oldb_client(FakeOpenLigaDb()) as oldb:
         data = await collect_briefing_data(client, oldb, sessions, LEAGUE, "Europe/Berlin", NOW)
-    assert "im_minus" not in data.payload
-    assert data.payload["minus_falls_alle_gebote_gewinnen"] == "3,00\u00a0Mio."
-    assert any(line.startswith("Gewinnen alle offenen Gebote") for line in data.fallback_lines)
+    facts = facts_by_id(data)
+    assert "verkaufsvorschlag" not in facts
+    warning = next(f for f in facts.values() if f.text.startswith("Gewinnen alle Gebote: "))
+    assert warning.important and warning.actions == {"verkaufen"}
+    assert "−3,00\u00a0Mio." in warning.text
 
 
 @pytest.mark.parametrize(
