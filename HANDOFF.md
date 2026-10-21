@@ -1,6 +1,6 @@
 # HANDOFF.md
 
-Aktiver Agent: opencode (Review + Fixes)
+Aktiver Agent: opencode (Review + Fixes + Merge + Deploy für C21)
 
 ## Ziel und Stand
 
@@ -9,7 +9,12 @@ Phasen 1–7b und die Erweiterungen bis C20 sind umgesetzt; Details in `docs/roa
 
 ## Aktueller Stand
 
-- Review-Findings für C21 behoben (siehe Commit „C21.5 Review-Fixes" auf
+- C21 umgesetzt und live (#14, Squash-Merge, deployiert auf `main` per
+  `docker compose up -d --build app worker`): reine Planlogik
+  `build_deadline_plan`, Karte „Deadline-Plan" auf der Teamseite, Telegram-Erinnerung
+  stündlich 7–23 Uhr, Schalter `deadline_plan:` in `config/notifications.yaml`,
+  Fingerabdruck im KV, C21.5-Review-Fixes (siehe vorigen Eintrag).
+- Review-Findings für C21 behoben (Commit „C21.5 Review-Fixes" auf
   `feat/c21-deadline-plan`): Worker-Job `deadline_plan_reminder` fängt jetzt Kickbase-
   Ausfälle breit ab (`except Exception` analog zur Backfill-Konvention), loggt Typ+Detail
   und gibt einen Status mit Exception-Namen zurück; dadurch crasht der stündliche
@@ -29,8 +34,7 @@ Phasen 1–7b und die Erweiterungen bis C20 sind umgesetzt; Details in `docs/roa
   datierte `PlanStep`s), Anzeige als Karte auf der Teamseite (`deadline_plan_view`, vorhandene
   Caches, Stale-Markierung) und Telegram-Erinnerung als Worker-Job `deadline_plan_reminder`
   (Cron 7–23 Uhr, Schalter `deadline_plan:` in `config/notifications.yaml`, Fingerabdruck aus
-  Deadline/Defizit-Bucket/Verkaufsliste, solved→deficit meldet erneut). Offen: nur PR + Review +
-  Merge + Deploy.
+  Deadline/Defizit-Bucket/Verkaufsliste, solved→deficit meldet erneut).
 - Morgen-Briefing neu (`app/services/briefing.py`): statt Kader-JSON fertige Fakten mit id
   aus `today_view` (neu: `buys`, optional `basis`), Kaufliste, Verkauf, Meldungen, Teamwert.
   KI-Zeilen nennen ihre Fakten; Zahlen/Spieler/Handlungen werden je Zeile geprüft, sonst
@@ -47,9 +51,9 @@ Phasen 1–7b und die Erweiterungen bis C20 sind umgesetzt; Details in `docs/roa
 
 ## Plan
 
-C21 Deadline-Plan mit Erinnerung (Branch `feat/c21-deadline-plan`, Abnahme siehe
-`docs/roadmap.md` Zeile „C21“). Kickbase nur lesend, keine Migration nötig (Zustand im
-bestehenden Key-Value-Speicher wie `notify.sent`).
+C21 Deadline-Plan mit Erinnerung (Abnahme siehe `docs/roadmap.md` Zeile „C21") — umgesetzt
+und live (PR #14). Kickbase nur lesend, keine Migration nötig (Zustand im bestehenden
+Key-Value-Speicher wie `notify.sent`).
 
 - [x] C21.1 Reine Planlogik `app/services/deadline_plan.py` (+ `tests/test_deadline_plan.py`):
   `build_deadline_plan(...)` → `DeadlinePlan` mit echter API-Deadline, `sell_by` =
@@ -72,10 +76,15 @@ bestehenden Key-Value-Speicher wie `notify.sent`).
   dem Cache), Schalter `deadline_plan:` in `config/notifications.yaml` + Modell in
   `app/notify/events.py`. Nur bei aktiviertem Telegram; Nachricht nur bei relevanter Änderung
   (Fingerabdruck aus Deadline, Defizit-Stufe, Verkaufsliste) und nur mit offenem Defizit –
-  gelöstes Defizit löst keinen neuen Alarm aus, erneutes Defizit schon. Tests mit Fake-Notifier.
+  gelöstes Defizit löst keinen neuen Alarm aus, erneutes Defizit schon. Tests mit Fake-Notifier
+  + Ausfall-Szenario (KickbaseUnavailable).
 - [x] C21.4 Doku: `docs/roadmap.md` C21 als umgesetzt markieren (Datum, Kurzbeschreibung,
   Last-Budget), `docs/features.md` und `.env.example`/Config-Kommentare ergänzen.
-- [ ] PR öffnen, einmal reviewen, Findings fixen, CI abwarten und mergen, deployen.
+- [x] C21.5 Review-Fixes: Worker umhüllt `deadline_plan_view` mit `except Exception` (analog zur
+  Backfill-Konvention), `ctx.league.get()` einmalig, Kommentar präzisiert, Bucket-Rundung
+  dokumentiert, neuer Test für Ausfall.
+- [x] PR #14 geöffnet, einmal Subagent-Review, Findings behoben, CI grün, Squash-Merge,
+  Branch gelöscht, deployiert.
 
 - [x] Morgen-Briefing: KI-Text an die Dashboard-Fakten binden (Heute-Box, Kaufliste mit Gebot,
   exakte Tage), je Zeile prüfen statt nur global Zahlen.
