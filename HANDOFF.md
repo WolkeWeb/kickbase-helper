@@ -1,6 +1,6 @@
 # HANDOFF.md
 
-Aktiver Agent: keiner
+Aktiver Agent: Claude Code (/auftrag) + opencode
 
 ## Ziel und Stand
 
@@ -35,6 +35,36 @@ Phasen 1–7b und die Erweiterungen bis C20 sind umgesetzt; Details in `docs/roa
   Sicherheitsmeldungen verweisen auf private Advisories). README/publication.md angepasst.
 
 ## Plan
+
+C21 Deadline-Plan mit Erinnerung (Branch `feat/c21-deadline-plan`, Abnahme siehe
+`docs/roadmap.md` Zeile „C21“). Kickbase nur lesend, keine Migration nötig (Zustand im
+bestehenden Key-Value-Speicher wie `notify.sent`).
+
+- [ ] C21.1 Reine Planlogik `app/services/deadline_plan.py` (+ `tests/test_deadline_plan.py`):
+  `build_deadline_plan(...)` → `DeadlinePlan` mit echter API-Deadline, `sell_by` =
+  Deadline − `trading.safety_hours` (`config/scoring.yaml`), konservativem Budget (offene eigene
+  Gebote genau einmal abziehen; bei widersprüchlichem Budget-/Gebotsstand den höheren
+  Reservebetrag wie in `transfer_simulation.py`), freien Kaderplätzen, geschützten Spielern
+  (`holding_roles`, C17) und nötigen Verkäufen über `sell_guide.build_sell_guide` ohne geschützte
+  Spieler. Rückwärtsplan als Liste datierter Schritte (Verkäufe bis `sell_by`, Elf/Gebote bis
+  Deadline). Englische Woche/kurze Frist: liegt `sell_by` schon in der Vergangenheit, Hinweis
+  „Verkauf vor Deadline nicht mehr sicher“ statt Zeitplan. Defizit bleibt sichtbar, wenn nur
+  geschützte Spieler es decken könnten. Tests: kein Defizit, Defizit mit/ohne Schutz, doppelte
+  Gebote, Deadline in <2 h, keine Deadline.
+- [ ] C21.2 Laden + Anzeige: async `deadline_plan_view(...)` (vorhandene Caches/Loader aus
+  `today.py`, `transfers.load_bid_status`, `holding_roles`, keine neuen Kickbase-Endpunkte) und
+  eine Karte „Deadline-Plan“ auf der Teamseite unter der Heute-Box (Template unter
+  `app/web/templates/`, mobil 375 px, Dark-Mode). Fehlen Daten → „unbekannt“, nie alte Werte als
+  aktuell. Tests: Route rendert Plan mit Fixtures, Fall ohne Deadline.
+- [ ] C21.3 Erinnerung: Worker-Job `deadline_plan_reminder` in `app/worker/jobs.py` + Cron in
+  `app/worker/main.py` (stündlich im Fenster `trading.close_hours` vor der Deadline, Markt aus
+  dem Cache), Schalter `deadline_plan:` in `config/notifications.yaml` + Modell in
+  `app/notify/events.py`. Nur bei aktiviertem Telegram; Nachricht nur bei relevanter Änderung
+  (Fingerabdruck aus Deadline, Defizit-Stufe, Verkaufsliste) und nur mit offenem Defizit –
+  gelöstes Defizit löst keinen neuen Alarm aus, erneutes Defizit schon. Tests mit Fake-Notifier.
+- [ ] C21.4 Doku: `docs/roadmap.md` C21 als umgesetzt markieren (Datum, Kurzbeschreibung,
+  Last-Budget), `docs/features.md` und `.env.example`/Config-Kommentare ergänzen.
+- [ ] PR öffnen, einmal reviewen, Findings fixen, CI abwarten und mergen, deployen.
 
 - [x] Morgen-Briefing: KI-Text an die Dashboard-Fakten binden (Heute-Box, Kaufliste mit Gebot,
   exakte Tage), je Zeile prüfen statt nur global Zahlen.
