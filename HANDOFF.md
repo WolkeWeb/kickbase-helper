@@ -9,6 +9,14 @@ Phasen 1–7b und die Erweiterungen bis C20 sind umgesetzt; Details in `docs/roa
 
 ## Aktueller Stand
 
+- C21.1 reine Planlogik in `app/services/deadline_plan.py` (`build_deadline_plan` → `DeadlinePlan`):
+  echte Deadline, `sell_by = deadline − trading.safety_hours`, konservative Reserve aus
+  `pending_offers_budget` und eigenen Geboten (höherer Wert wie in `transfer_simulation`),
+  eigene Gebote pro Spieler einmal gezählt, freie Kaderplätze (beste Formation), geschützte
+  Spieler (C17 `holding_roles`) aus `build_sell_guide` ausgenommen. Rückwärtsplan aus datierten
+  `PlanStep`s: Verkäufe bis `sell_by`, Elf/Gebote bis Deadline. Liegt `sell_by` in der
+  Vergangenheit (Englische Woche / kurze Frist) fällt der Zeitplan weg, Hinweis ersetzt ihn.
+  Defizit bleibt sichtbar, wenn nur geschützte Stammspieler es decken könnten.
 - Morgen-Briefing neu (`app/services/briefing.py`): statt Kader-JSON fertige Fakten mit id
   aus `today_view` (neu: `buys`, optional `basis`), Kaufliste, Verkauf, Meldungen, Teamwert.
   KI-Zeilen nennen ihre Fakten; Zahlen/Spieler/Handlungen werden je Zeile geprüft, sonst
@@ -40,7 +48,7 @@ C21 Deadline-Plan mit Erinnerung (Branch `feat/c21-deadline-plan`, Abnahme siehe
 `docs/roadmap.md` Zeile „C21“). Kickbase nur lesend, keine Migration nötig (Zustand im
 bestehenden Key-Value-Speicher wie `notify.sent`).
 
-- [ ] C21.1 Reine Planlogik `app/services/deadline_plan.py` (+ `tests/test_deadline_plan.py`):
+- [x] C21.1 Reine Planlogik `app/services/deadline_plan.py` (+ `tests/test_deadline_plan.py`):
   `build_deadline_plan(...)` → `DeadlinePlan` mit echter API-Deadline, `sell_by` =
   Deadline − `trading.safety_hours` (`config/scoring.yaml`), konservativem Budget (offene eigene
   Gebote genau einmal abziehen; bei widersprüchlichem Budget-/Gebotsstand den höheren
@@ -48,7 +56,7 @@ bestehenden Key-Value-Speicher wie `notify.sent`).
   (`holding_roles`, C17) und nötigen Verkäufen über `sell_guide.build_sell_guide` ohne geschützte
   Spieler. Rückwärtsplan als Liste datierter Schritte (Verkäufe bis `sell_by`, Elf/Gebote bis
   Deadline). Englische Woche/kurze Frist: liegt `sell_by` schon in der Vergangenheit, Hinweis
-  „Verkauf vor Deadline nicht mehr sicher“ statt Zeitplan. Defizit bleibt sichtbar, wenn nur
+  „Verkauf vor Deadline nicht mehr sicher" statt Zeitplan. Defizit bleibt sichtbar, wenn nur
   geschützte Spieler es decken könnten. Tests: kein Defizit, Defizit mit/ohne Schutz, doppelte
   Gebote, Deadline in <2 h, keine Deadline.
 - [ ] C21.2 Laden + Anzeige: async `deadline_plan_view(...)` (vorhandene Caches/Loader aus
