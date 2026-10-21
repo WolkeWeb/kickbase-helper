@@ -79,6 +79,19 @@ class MatchdayReportRule(BaseModel):
     enabled: bool = True
 
 
+class DeadlinePlanRule(BaseModel):
+    """Settings for `config/notifications.yaml` → `deadline_plan:` (Block C, C21.3).
+
+    Telegram reminder for an open deficit before the lineup deadline (hours ahead defined by
+    `trading.close_hours`). The job is fully driven by the existing `deadline_plan` service:
+    nothing fires while the budget is healthy, the alarm re-arms only when the (deadline,
+    deficit bucket, recommended sales) fingerprint changes – a solved deficit clears the
+    fingerprint so a fresh deficit triggers a new message."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    enabled: bool = True
+
+
 class NotificationConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
     market_value: MarketValueRule
@@ -86,6 +99,7 @@ class NotificationConfig(BaseModel):
     watchlist: WatchlistConfig = Field(default_factory=WatchlistConfig)
     own_offers: OwnOffersRule = Field(default_factory=OwnOffersRule)
     matchday_report: MatchdayReportRule = Field(default_factory=MatchdayReportRule)
+    deadline_plan: DeadlinePlanRule = Field(default_factory=DeadlinePlanRule)
 
 
 @lru_cache

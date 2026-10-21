@@ -9,6 +9,14 @@ Phasen 1–7b und die Erweiterungen bis C20 sind umgesetzt; Details in `docs/roa
 
 ## Aktueller Stand
 
+- C21.3 Erinnerung: Worker-Job `deadline_plan_reminder` in `app/worker/jobs.py`,
+  Cron `hour="7-23", minute=0` in `app/worker/main.py`, Schalter `deadline_plan:`
+  in `config/notifications.yaml` und Modell `DeadlinePlanRule` in `app/notify/events.py`.
+  Fingerabdruck (`app/notify/deadline_plan.situation_key`) aus stabiler Spieler-ID (oder Name
+  als Fallback), Deadline und 250-k€-Bucket; solved→deficit-Reentry meldet erneut.
+  Frühe Bails: kein Telegram, Regel aus, keine Deadline, außerhalb Close-Fenster, gelöstes
+  Defizit (committed baseline, keine Nachricht). `test_schedule` und 21 Fälle in
+  `test_deadline_plan_reminder.py` grün, Worker-Test 62 grün.
 - C21.2 Laden + Anzeige: `deadline_plan_view(...)` in `app/services/deadline_plan.py` zieht
   Squad/Budget/Markt/MyEleven über vorhandene Caches (401-Re-Login, Stale-Markierung),
   `holding_roles` für Schutz-IDs, `_pick_deadline` schluckt vergangene Fristen. Route
@@ -68,10 +76,10 @@ bestehenden Key-Value-Speicher wie `notify.sent`).
   Gebote, Deadline in <2 h, keine Deadline.
 - [x] C21.2 Laden + Anzeige: async `deadline_plan_view(...)` (vorhandene Caches/Loader aus
   `today.py`, `transfers.load_bid_status`, `holding_roles`, keine neuen Kickbase-Endpunkte) und
-  eine Karte „Deadline-Plan“ auf der Teamseite unter der Heute-Box (Template unter
-  `app/web/templates/`, mobil 375 px, Dark-Mode). Fehlen Daten → „unbekannt“, nie alte Werte als
+  eine Karte „Deadline-Plan" auf der Teamseite unter der Heute-Box (Template unter
+  `app/web/templates/`, mobil 375 px, Dark-Mode). Fehlen Daten → „unbekannt", nie alte Werte als
   aktuell. Tests: Route rendert Plan mit Fixtures, Fall ohne Deadline.
-- [ ] C21.3 Erinnerung: Worker-Job `deadline_plan_reminder` in `app/worker/jobs.py` + Cron in
+- [x] C21.3 Erinnerung: Worker-Job `deadline_plan_reminder` in `app/worker/jobs.py` + Cron in
   `app/worker/main.py` (stündlich im Fenster `trading.close_hours` vor der Deadline, Markt aus
   dem Cache), Schalter `deadline_plan:` in `config/notifications.yaml` + Modell in
   `app/notify/events.py`. Nur bei aktiviertem Telegram; Nachricht nur bei relevanter Änderung

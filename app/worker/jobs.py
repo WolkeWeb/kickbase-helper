@@ -767,6 +767,57 @@ DEADLINE_WARN_WINDOW = timedelta(hours=2)
 DEADLINE_RISK_THRESHOLD = RISK_THRESHOLD
 
 
+async def deadline_plan_reminder(ctx: JobContext) -> str:
+    """Telegram reminder while the deadline plan shows an open deficit (Block C, C21.3).
+
+    Reuses the C21.2 `deadline_plan_view` loader (single Kickbase round trip, no fresh
+    endpoints). Fires at most once per (deadline, deficit bucket, recommended sales)
+    fingerprint; a solved deficit clears the fingerprint and a future deficit with the same
+    numbers still triggers a fresh alarm. Outside the close-hours window or with no Telegram
+    it bails out early – the job is cheap to skip and runs hourly, so a stale Telegram
+    config must not burst the API."""
+    from app.notify.deadline_plan import commit_reminder, compose_reminder, should_remind
+    from app.services.deadline_plan import deadline_plan_view
+
+    if ctx.notifier is None or ctx.notifications is None:
+        return "Benachrichtigungen aus (Telegram nicht konfiguriert)"
+    rule = ctx.notifications.deadline_plan
+    if not rule.enabled:
+        return "Benachrichtigungen aus (Deadline-Plan-Alarm aus)"
+
+    now = ctx.clock()
+    view = await deadline_plan_view(ctx.client, ctx.sessions, await ctx.league.get(), now=now)
+    if view is None:
+        return "Deadline-Plan: Kader nicht ladbar"
+    plan = view.plan
+    if plan.deadline is None:
+        # Mirror the "keine Deadline"-silence of the team-card; commit a baseline so the next
+        # run can return immediately without recomputing.
+        await commit_reminder(ctx.kv, "none")
+        return "keine Deadline – kein Reminder"
+    close_window = timedelta(hours=load_scoring_config().trading.close_hours)
+    if now < plan.deadline - close_window:
+        return "außerhalb des Deadline-Fensters"
+    # Only an *open* deficit is worth a reminder – budget healthy → no message, clear the
+    # fingerprint so a future deficit with the same numbers still fires.
+    from app.notify.deadline_plan import situation_key
+
+    key = situation_key(plan)
+    if not key.startswith("deficit:"):
+        await commit_reminder(ctx.kv, key)
+        return "kein offenes Defizit"
+
+    if not await should_remind(ctx.kv, key):
+        return "für diese Situation schon gemeldet"
+
+    reminder = compose_reminder(view, (await ctx.league.get()).name, ctx.tz, ctx.public_url)
+    if reminder is None:  # defensive: situation_key said deficit but compose had nothing to say
+        return "kein Reminder-Text"
+    await ctx.notifier.send(reminder.text)
+    await commit_reminder(ctx.kv, reminder.key)
+    return "Deadline-Plan erinnert"
+
+
 async def deadline_warning(ctx: JobContext) -> str:
     """Warn ~2 h before the lineup deadline about risky starters, gaps and expiring bids."""
     if ctx.notifier is None:
