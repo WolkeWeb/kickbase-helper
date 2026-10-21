@@ -1,6 +1,6 @@
 # HANDOFF.md
 
-Aktiver Agent: Claude Code (Briefing-Fakten)
+Aktiver Agent: keiner
 
 ## Ziel und Stand
 
