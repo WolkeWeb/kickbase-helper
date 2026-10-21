@@ -31,6 +31,7 @@ from app.news.service import (
 )
 from app.services import holding_roles, watchlist
 from app.services.daily_trends import load_trends
+from app.services.deadline_plan import deadline_plan_view
 from app.services.decision import player_decision
 from app.services.live_matchday import load_live_matchday
 from app.services.matchday_history import load_matchday_history
@@ -240,6 +241,23 @@ async def today(request: Request) -> HTMLResponse | RedirectResponse:
     )
     return templates.TemplateResponse(
         request, "partials/today.html", {"today": view, "error": error}
+    )
+
+
+@router.get("/deadline_plan", response_class=HTMLResponse, response_model=None)
+async def deadline_plan(request: Request) -> HTMLResponse | RedirectResponse:
+    """The Deadline-Plan card, lazy-loaded like /heute. Loads data from the cached kickbase
+    endpoints and the local holding-role table only — no new Kickbase calls."""
+    if not _partial_request(request):
+        return RedirectResponse("/", status_code=303)
+    state = request.app.state
+    view, error, _ = await _guarded(
+        request,
+        "des Deadline-Plans",
+        lambda lg: deadline_plan_view(state.kickbase, state.sessions, lg),
+    )
+    return templates.TemplateResponse(
+        request, "partials/deadline_plan.html", {"view": view, "error": error}
     )
 
 

@@ -9,6 +9,13 @@ Phasen 1–7b und die Erweiterungen bis C20 sind umgesetzt; Details in `docs/roa
 
 ## Aktueller Stand
 
+- C21.2 Laden + Anzeige: `deadline_plan_view(...)` in `app/services/deadline_plan.py` zieht
+  Squad/Budget/Markt/MyEleven über vorhandene Caches (401-Re-Login, Stale-Markierung),
+  `holding_roles` für Schutz-IDs, `_pick_deadline` schluckt vergangene Fristen. Route
+  `/deadline_plan` in `app/web/routes/pages.py` (HTMX-Redirect, `_guarded` für Ausfälle).
+  Karte unter Heute in `partials/team.html`, partial `partials/deadline_plan.html`
+  (Finanzierung, geschützte Stammspieler, Schritte, Stale-Hinweis). Tests in
+  `test_deadline_plan_view.py` und `test_deadline_plan_route.py` grün (28 Fälle).
 - C21.1 reine Planlogik in `app/services/deadline_plan.py` (`build_deadline_plan` → `DeadlinePlan`):
   echte Deadline, `sell_by = deadline − trading.safety_hours`, konservative Reserve aus
   `pending_offers_budget` und eigenen Geboten (höherer Wert wie in `transfer_simulation`),
@@ -59,7 +66,7 @@ bestehenden Key-Value-Speicher wie `notify.sent`).
   „Verkauf vor Deadline nicht mehr sicher" statt Zeitplan. Defizit bleibt sichtbar, wenn nur
   geschützte Spieler es decken könnten. Tests: kein Defizit, Defizit mit/ohne Schutz, doppelte
   Gebote, Deadline in <2 h, keine Deadline.
-- [ ] C21.2 Laden + Anzeige: async `deadline_plan_view(...)` (vorhandene Caches/Loader aus
+- [x] C21.2 Laden + Anzeige: async `deadline_plan_view(...)` (vorhandene Caches/Loader aus
   `today.py`, `transfers.load_bid_status`, `holding_roles`, keine neuen Kickbase-Endpunkte) und
   eine Karte „Deadline-Plan“ auf der Teamseite unter der Heute-Box (Template unter
   `app/web/templates/`, mobil 375 px, Dark-Mode). Fehlen Daten → „unbekannt“, nie alte Werte als

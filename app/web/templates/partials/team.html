@@ -36,6 +36,12 @@
     <p class="today__when muted">Lädt, was vor der Deadline zu tun ist …</p>
   </section>
 
+  <section class="deadline-plan deadline-plan--loading" id="deadline-plan" aria-labelledby="deadline-plan-title"
+           hx-get="/deadline_plan" hx-trigger="load" hx-swap="outerHTML">
+    <div class="deadline-plan__head"><h2 id="deadline-plan-title">Deadline-Plan</h2></div>
+    <p class="muted small">Lädt den Zeitplan bis zum Anpfiff …</p>
+  </section>
+
 
   <section class="lineup" aria-labelledby="lineup-title">
     <h2 class="lineup__title" id="lineup-title">

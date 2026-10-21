@@ -16,7 +16,12 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 
+from sqlalchemy.ext.asyncio import async_sessionmaker
+
 from app.kickbase import models as m
+from app.kickbase.client import Fetched, KickbaseClient
+from app.kickbase.league import ResolvedLeague
+from app.services import holding_roles
 from app.services.lineup import FORMATIONS, Formation
 from app.services.scoring import TradingConfig, load_scoring_config
 from app.services.sell_guide import (
@@ -250,4 +255,98 @@ def build_deadline_plan(
         late_window=late_window,
         deficit_stays_visible=deficit_stays,
         notes=tuple(notes),
+    )
+
+
+# ---------------------------------------------------------------------------- view loader (C21.2)
+
+
+@dataclass(frozen=True)
+class DeadlinePlanView:
+    """The schedule plus enough context for the card (freshness, matchday, lineup size)."""
+
+    plan: DeadlinePlan
+    now: datetime
+    matchday: int | None
+    stale: bool = False  # at least one endpoint returned cached/stale data
+    fetched_at: datetime | None = None
+
+    @property
+    def lineup_count(self) -> int:
+        return sum(1 for step in self.plan.steps if step.label == "Elf stellen und Gebote setzen")
+
+
+def _to_sale_player(player: m.SquadPlayer) -> SalePlayer:
+    """Squad player → what `build_sell_guide` expects. `out` follows Kickbase availability, not
+    just the status label – an OUT availability never counts for the eleven (lineup nor sale)."""
+    return SalePlayer(
+        name=player.name,
+        value=int(player.market_value),
+        average_points=int(player.average_points),
+        start_percent=None,
+        position=m.Position(player.position),
+        out=m.availability(player.status) is m.Availability.OUT,
+        id=player.id,
+    )
+
+
+def _pick_deadline(market: m.Market, now: datetime) -> datetime | None:
+    """Kickbase sometimes returns a past deadline (the deadline of the last matchday). Treat
+    those as unknown so the plan doesn't insist on a time already gone."""
+    deadline = market.deadline
+    if deadline is None:
+        return None
+    if deadline <= now:
+        return None
+    return deadline
+
+
+async def deadline_plan_view(
+    client: KickbaseClient,
+    sessions: async_sessionmaker,
+    league: ResolvedLeague,
+    now: datetime | None = None,
+) -> DeadlinePlanView | None:
+    """Collect the data the plan needs from the existing kickbase endpoints (with their caches)
+    and the local holding-role table, then run the pure builder. Returns None when the squad
+    could not be loaded – the card should show an unknown state, not invent a schedule."""
+    now = now or datetime.now(UTC)
+    market: Fetched[m.Market] = await client.market(league.id)
+    squad: Fetched[m.Squad] = await client.squad(league.id)
+    eleven: Fetched[m.MyEleven] = await client.my_eleven(league.id)
+    budget: Fetched[m.Budget] = await client.budget(league.id)
+    if not squad.data.players:
+        return None
+    roles = await holding_roles.roles_for(sessions, league.id)
+    protected_ids = {pid for pid, role in roles.items() if role == "core"}
+    own_bids = {
+        p.id: int(p.my_offer)
+        for p in market.data.players
+        if p.my_offer is not None and int(p.my_offer) > 0
+    }
+    lineup_ids = [p.id for p in eleven.data.players]
+    plan = build_deadline_plan(
+        now=now,
+        deadline=_pick_deadline(market.data, now),
+        budget=int(budget.data.budget),
+        pending_offers_budget=(
+            int(budget.data.pending_offers_budget)
+            if budget.data.pending_offers_budget is not None
+            else None
+        ),
+        own_bids=own_bids,
+        squad=[_to_sale_player(p) for p in squad.data.players],
+        lineup_ids=lineup_ids,
+        protected_ids=protected_ids,
+    )
+    stale = any(f.stale for f in (market, squad, eleven, budget))
+    return DeadlinePlanView(
+        plan=plan,
+        now=now,
+        matchday=market.data.next_matchday,
+        stale=stale,
+        fetched_at=max(
+            (f.fetched_at for f in (market, squad, eleven, budget)),
+            default=None,
+        ),
     )
