@@ -1,6 +1,6 @@
 # HANDOFF.md
 
-Aktiver Agent: opencode (Review + Fixes + Merge + Deploy für C21)
+Aktiver Agent: keiner
 
 ## Ziel und Stand
 
