@@ -97,6 +97,8 @@ xp:
 # Trading ist getrennt vom Spieltags-Score: beobachtete Tagesbewegung, keine Prognose.
 trading:
   close_hours: 24        # spätestens dann Spieltags-Elf und Finanzierung finalisieren
+                         # (Fenster für Trading-Hinweise und die Deadline-Plan-Erinnerung)
   safety_hours: 2        # Verkauf/Verrechnung vor der tatsächlichen Deadline einplanen
+                         # (Deadline-Plan: `sell_by = Deadline − safety_hours`)
   min_daily_gain: 20000  # Mindestanstieg (€) für Marktangebote im Trading-Bereich
   daily_fall_percent: -0.25  # aktueller Rückgang als Verkaufssignal; nicht das 7-Tage-Minus

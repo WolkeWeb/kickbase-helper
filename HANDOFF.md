@@ -1,6 +1,6 @@
 # HANDOFF.md
 
-Aktiver Agent: keiner
+Aktiver Agent: opencode (Review + Fixes)
 
 ## Ziel und Stand
 
@@ -9,6 +9,28 @@ Phasen 1–7b und die Erweiterungen bis C20 sind umgesetzt; Details in `docs/roa
 
 ## Aktueller Stand
 
+- Review-Findings für C21 behoben (siehe Commit „C21.5 Review-Fixes" auf
+  `feat/c21-deadline-plan`): Worker-Job `deadline_plan_reminder` fängt jetzt Kickbase-
+  Ausfälle breit ab (`except Exception` analog zur Backfill-Konvention), loggt Typ+Detail
+  und gibt einen Status mit Exception-Namen zurück; dadurch crasht der stündliche
+  Scheduler bei einem API-Blip nicht mehr. `ctx.league.get()` wird nur noch einmal
+  aufgerufen, irreführender Kommentar „single Kickbase round trip" → „vier gecachte
+  Abrufe – Markt, Kader, Aufstellung, Budget – keine neuen Endpunkte" korrigiert, neue
+  Doku-Zeile auf `_DEFICIT_BUCKET_EUR` (Integer-Floor-Rundung verhindert Aufwärts-
+  Verschiebung an der Bucketgrenze). Neuer Test
+  `test_reminder_skips_quietly_on_kickbase_failure` deckt das Ausfall-Szenario ab.
+- C21.4 Doku: C21 in `docs/roadmap.md` als umgesetzt 21.10.2026 markiert (Tabellenzeile,
+  Last-Budget, Detailabsatz, Folgevorschläge jetzt nur noch C22 + C15), eigene Zeile
+  „Deadline-Plan" in `docs/features.md` plus Telegram-Erinnerung dort verlinkt,
+  `close_hours`/`safety_hours` in `config/scoring.yaml` kommentiert. Keine neue
+  Umgebungsvariable (Zustand im Key-Value-Speicher, Telegram wie bisher über `secrets/`).
+- C21.1–C21.3 Deadline-Plan: reine Planlogik `build_deadline_plan` (`app/services/deadline_plan.py`,
+  `sell_by` = Deadline − `trading.safety_hours`, konservative Reserve, `holding_roles`-Schutz,
+  datierte `PlanStep`s), Anzeige als Karte auf der Teamseite (`deadline_plan_view`, vorhandene
+  Caches, Stale-Markierung) und Telegram-Erinnerung als Worker-Job `deadline_plan_reminder`
+  (Cron 7–23 Uhr, Schalter `deadline_plan:` in `config/notifications.yaml`, Fingerabdruck aus
+  Deadline/Defizit-Bucket/Verkaufsliste, solved→deficit meldet erneut). Offen: nur PR + Review +
+  Merge + Deploy.
 - Morgen-Briefing neu (`app/services/briefing.py`): statt Kader-JSON fertige Fakten mit id
   aus `today_view` (neu: `buys`, optional `basis`), Kaufliste, Verkauf, Meldungen, Teamwert.
   KI-Zeilen nennen ihre Fakten; Zahlen/Spieler/Handlungen werden je Zeile geprüft, sonst
@@ -22,19 +44,38 @@ Phasen 1–7b und die Erweiterungen bis C20 sind umgesetzt; Details in `docs/roa
   `demo_data.py` (Test-Fixtures, erfundene Marktwerte), `scripts/readme_screenshots.py`;
   Bilder nur unter `docs/images/demo/` (`check_public_tree.py` erlaubt nur diesen Ordner).
   Merge-Ziel ist das öffentliche Repo `WolkeWeb/kickbase-helper` (origin geprüft).
-- Systemprüfung: lokales `COMPOSE_FILE` um `compose.claude.yaml` ergänzt; Bridge/MCP
-  wieder beidseitig erreichbar, HTTPS und letzte Worker-Jobs ok, DB auf 0015.
-  Setup weist mehrdeutige Backslashes vor Dateierzeugung ab; Update-Doku ergänzt.
-  1372 Tests grün (1 Skip), SQLite + isoliertes PostgreSQL, Ruff und Image-Erststart ok.
-- Öffentlicher Betrieb: README-Hinweis (inoffiziell, Sperrrisiko, ohne Gewähr, Drittanbieter-
-  Bedingungen); Worker-Port 8768 + `host.docker.internal` nur noch über `compose.claude.yaml`
-  (experimentell, in `check_deployment.py` geprüft). Maintainer-Dateien unter `docs/maintainer/`
-  und `deploy/maintainer/`, Übersicht in `docs/maintainer/README.md`.
-- Community-Dateien: `LICENSE` (MIT), `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md` (Deutsch mit
-  englischer Kurzfassung), Issue-Formulare unter `.github/ISSUE_TEMPLATE/` (Blanko-Issues aus,
-  Sicherheitsmeldungen verweisen auf private Advisories). README/publication.md angepasst.
 
 ## Plan
+
+C21 Deadline-Plan mit Erinnerung (Branch `feat/c21-deadline-plan`, Abnahme siehe
+`docs/roadmap.md` Zeile „C21“). Kickbase nur lesend, keine Migration nötig (Zustand im
+bestehenden Key-Value-Speicher wie `notify.sent`).
+
+- [x] C21.1 Reine Planlogik `app/services/deadline_plan.py` (+ `tests/test_deadline_plan.py`):
+  `build_deadline_plan(...)` → `DeadlinePlan` mit echter API-Deadline, `sell_by` =
+  Deadline − `trading.safety_hours` (`config/scoring.yaml`), konservativem Budget (offene eigene
+  Gebote genau einmal abziehen; bei widersprüchlichem Budget-/Gebotsstand den höheren
+  Reservebetrag wie in `transfer_simulation.py`), freien Kaderplätzen, geschützten Spielern
+  (`holding_roles`, C17) und nötigen Verkäufen über `sell_guide.build_sell_guide` ohne geschützte
+  Spieler. Rückwärtsplan als Liste datierter Schritte (Verkäufe bis `sell_by`, Elf/Gebote bis
+  Deadline). Englische Woche/kurze Frist: liegt `sell_by` schon in der Vergangenheit, Hinweis
+  „Verkauf vor Deadline nicht mehr sicher" statt Zeitplan. Defizit bleibt sichtbar, wenn nur
+  geschützte Spieler es decken könnten. Tests: kein Defizit, Defizit mit/ohne Schutz, doppelte
+  Gebote, Deadline in <2 h, keine Deadline.
+- [x] C21.2 Laden + Anzeige: async `deadline_plan_view(...)` (vorhandene Caches/Loader aus
+  `today.py`, `transfers.load_bid_status`, `holding_roles`, keine neuen Kickbase-Endpunkte) und
+  eine Karte „Deadline-Plan" auf der Teamseite unter der Heute-Box (Template unter
+  `app/web/templates/`, mobil 375 px, Dark-Mode). Fehlen Daten → „unbekannt", nie alte Werte als
+  aktuell. Tests: Route rendert Plan mit Fixtures, Fall ohne Deadline.
+- [x] C21.3 Erinnerung: Worker-Job `deadline_plan_reminder` in `app/worker/jobs.py` + Cron in
+  `app/worker/main.py` (stündlich im Fenster `trading.close_hours` vor der Deadline, Markt aus
+  dem Cache), Schalter `deadline_plan:` in `config/notifications.yaml` + Modell in
+  `app/notify/events.py`. Nur bei aktiviertem Telegram; Nachricht nur bei relevanter Änderung
+  (Fingerabdruck aus Deadline, Defizit-Stufe, Verkaufsliste) und nur mit offenem Defizit –
+  gelöstes Defizit löst keinen neuen Alarm aus, erneutes Defizit schon. Tests mit Fake-Notifier.
+- [x] C21.4 Doku: `docs/roadmap.md` C21 als umgesetzt markieren (Datum, Kurzbeschreibung,
+  Last-Budget), `docs/features.md` und `.env.example`/Config-Kommentare ergänzen.
+- [ ] PR öffnen, einmal reviewen, Findings fixen, CI abwarten und mergen, deployen.
 
 - [x] Morgen-Briefing: KI-Text an die Dashboard-Fakten binden (Heute-Box, Kaufliste mit Gebot,
   exakte Tage), je Zeile prüfen statt nur global Zahlen.

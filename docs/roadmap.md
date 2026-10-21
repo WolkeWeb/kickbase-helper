@@ -308,7 +308,7 @@ Branch/PR, Fixtures und Abnahme; Kickbase bleibt vollständig lesend.
 | **C18 Tatsächlicher Trading-Gewinn · umgesetzt 14.10.2026** | Einkauf inklusive bezahltem Aufschlag, Haltedauer und echten Verkaufserlös gegenüberstellen; offene Wertsteigerung getrennt von realisiertem Gewinn zeigen. | Liga-Transferhistorie und eigener Bestand, eindeutige Kauf-/Verkaufszuordnung, unvollständige Historie als unbekannt. Wiederholte Sammlung dupliziert nichts; keine zukünftigen Gewinne im verfügbaren Budget. |
 | **C19 Trendwende statt Wochen-Minus · Tagesansicht umgesetzt 14.10.2026** | Aufeinanderfolgende bestätigte Tagesänderungen neben dem 3-/7-Tage-Kontext zeigen. Optional Hinweis, wenn ein steigender Trade nach dem Update tatsächlich dreht. | Keine Lücken als Tageswerte; Update-Zeiten/alten API-Anker prüfen; mindestens ein eigener bestätigter Update-Stand. Deduplizierte Hinweise nur bei aktiviertem Telegram. Eine Prognose bleibt am Phase-8-Backtest gated. |
 | **C20 Nachrichten-Verlässlichkeit · Revisionen umgesetzt 14.10.2026** | Geänderte Artikel mit gleicher GUID nachziehen, später zuordenbare Meldungen erneut matchen und die verwendete Textbasis nachvollziehbar machen. | Inhaltsrevisionen begrenzt verarbeiten; keine erneute Benachrichtigung bereits behandelter Artikel nach Neu-Auswertung. Quellendatum, Textausschnitt und Zuordnungsgrund sichtbar. Eine zusätzliche Konfliktregel bleibt Folgeausbau; News ändern keine Einsatzprognose automatisch. |
-| **C21 Deadline-Plan mit Erinnerung** | Zum tatsächlichen Anpfiff Budgetziel, freien Plätzen, geschützten Spielern und nötigen Verkäufen folgen; Verkaufs-Puffer berücksichtigen, auch in englischen Wochen. | Konservative Werte, offene Gebote einmal zählen, Rückwärtsplanung ab echter API-Deadline. Erinnerung nur bei aktiviertem Telegram und relevanter Änderung; bereits gelöstes Defizit löst keinen neuen Alarm aus. |
+| **C21 Deadline-Plan mit Erinnerung · umgesetzt 21.10.2026** | Zum tatsächlichen Anpfiff Budgetziel, freien Plätzen, geschützten Spielern und nötigen Verkäufen folgen; Verkaufs-Puffer berücksichtigen, auch in englischen Wochen. | Konservative Werte, offene Gebote einmal zählen, Rückwärtsplanung ab echter API-Deadline. Erinnerung nur bei aktiviertem Telegram und relevanter Änderung; bereits gelöstes Defizit löst keinen neuen Alarm aus. |
 | **C22 Spieltagsabschluss und Korrekturen** | Vorläufige Punkte mit späterem bestätigtem Abschluss vergleichen; optional gesammelte Merkliste-Spieler auf Abruf ergänzen. | Endgültigkeit nicht aus Abpfiff ableiten; letzte offizielle Korrektur und Quelle dokumentieren. Abgeschlossene Bilanz nicht aus unvollständiger Live-Summe überschreiben. Weitere Spieler nur mit dokumentiertem Endpunkt und bestehendem Request-Budget. |
 
 Last-Budget der neuen umgesetzten Ansichten: Trading/Originalartikel nutzen vorhandenen Cache
@@ -316,6 +316,11 @@ bzw. Datenbank. Nachrichten: drei Basisabrufe pro Tag plus höchstens sechs stü
 im Deadline-Fenster; keine zusätzliche KI-Auswertung unveränderter Artikel. Spieltagspunkte:
 höchstens sechs Teamcenter-Abrufe je Stunde bei aktiver Ansicht, dazu der geteilte Spielplan-
 Cache (30 min) und User-Cache (24 h). Keine Live-Abfragen, wenn die Ansicht geschlossen ist.
+Deadline-Plan: keine neuen Endpunkte, keine eigenen Abrufe – Karte und Erinnerung lesen
+Markt, Kader, Aufstellung, Budget und eigene Gebote aus denselben Caches wie die Teamseite.
+Der stündliche Job (7–23 Uhr) bricht ab, bevor er lädt, wenn Telegram oder die Regel
+`deadline_plan` in `config/notifications.yaml` aus sind; ohne offenes Defizit oder außerhalb
+`trading.close_hours` wird nichts gesendet.
 
 
 C14 umgesetzt: `/empfehlungen/simulation` kombiniert bis zu 25 Verkäufe/Käufe mit anpassbarem
@@ -335,9 +340,9 @@ verlangt normale Anmeldung/CSRF und einen aktuellen eigenen Kader, Fehler melden
 Additive Migration 0013; Rückwechsel ohne Präferenzlöschung siehe Deployment-Doku.
 lokal archivierte Browserprüfung (Screenshots nicht zur Veröffentlichung).
 
-Nach C14/C17 sind C18 tatsächlicher Trading-Gewinn, C19 bestätigte Tagestrends und C20
-Nachrichtenrevisionen umgesetzt. Weitere Vorschläge: C21 Deadline-Erinnerungen und C22
-Spieltagskorrekturen; C15 sollte die nun belegte knappe VM-Plattenkapazität überwachen.
+Nach C14/C17 sind C18 tatsächlicher Trading-Gewinn, C19 bestätigte Tagestrends, C20
+Nachrichtenrevisionen und C21 Deadline-Plan mit Erinnerung umgesetzt. Weitere Vorschläge:
+C22 Spieltagskorrekturen; C15 sollte die nun belegte knappe VM-Plattenkapazität überwachen.
 Diese übrigen Folgefeatures bleiben geplant und werden getrennt umgesetzt.
 
 
@@ -377,3 +382,21 @@ lokal archivierte Browserprüfung (Screenshots nicht zur Veröffentlichung).
 
 Team-Meldungen werden nach dem beobachteten Änderungszeitpunkt sortiert. Das Morgenbriefing
 bewahrt das ursprüngliche Quellendatum und benennt zusätzlich erkannte Änderung und Revision.
+
+
+C21 umgesetzt: Die Karte „Deadline-Plan" auf der Teamseite führt von jetzt bis zum echten
+Aufstellungs-Anpfiff zurück: freie Plätze je Position, Finanzierung mit konservativ reserviertem
+Budget (offene eigene Gebote genau einmal, bei widersprüchlichem Budget-/Gebotsstand der höhere
+Reservebetrag wie in der Transfer-Simulation), geschützte Stammspieler (C17) und die daraus
+nötigen Verkäufe aus dem Verkaufs-Guide ohne geschützte Spieler. Verkäufe müssen bis
+`deadline − trading.safety_hours` verbucht sein, sonst zeigt die Karte den Hinweis „Verkauf vor
+Deadline nicht mehr sicher" statt eines Zeitplans. Bleibt das Defizit nur durch geschützte
+Stammspieler deckbar, wird das sichtbar gemacht statt still eines davon einzuplanen. Fehlende
+Daten erscheinen als „unbekannt", veraltete Cache-Werte als stale-Hinweis; neue Kickbase-
+Endpunkte gibt es nicht. Der Telegram-Job `deadline_plan_reminder` läuft stündlich von 7 bis
+23 Uhr, aber nur bei aktiviertem Telegram und aktiver Regel `deadline_plan`
+(`config/notifications.yaml`) sowie mit offenem Defizit innerhalb von `trading.close_hours` vor
+der Deadline. Eine Nachricht geht nur bei geänderter Lage (Fingerabdruck aus Deadline,
+Defizit-Stufe und empfohlener Verkaufsliste); ein gelöstes Defizit merkt sich als Baseline und
+löst keinen neuen Alarm aus, ein erneut auftretendes schon. Zustand liegt im bestehenden
+Key-Value-Speicher (`notify.deadline_plan.fingerprint`), also ohne Migration.

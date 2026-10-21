@@ -54,3 +54,14 @@ own_offers:
 # letzte Zeile aus der DB, kein API-Call und kein Mitlesen anderer Manager.
 matchday_report:
   enabled: true
+
+# Deadline-Plan-Erinnerung (Block C, C21.3): Telegram-Meldung, wenn der `deadline_plan_view`
+# ein *offenes Defizit* zeigt und die Aufstellungs-Deadline innerhalb von `trading.close_hours`
+# liegt. Geschützt durch `holding_roles` (C17), Bietbeträge und Pending-Offers-Budget werden
+# konservativ reserviert; nur bei tatsächlichem Defizit. Eine Nachricht geht nur bei
+# relevanter Änderung raus (Fingerabdruck aus Deadline, Defizit-Stufe und empfohlener
+# Verkaufsliste) – gelöstes Defizit räumt den Fingerabdruck auf, ein neu auftretendes
+# Defizit löst wieder einen Alarm aus. Bot-Lagebild (`app/bot/context.py`) zeigt denselben
+# Plan unabhängig von `enabled`/Telegram.
+deadline_plan:
+  enabled: true

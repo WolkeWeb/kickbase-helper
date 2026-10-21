@@ -1,0 +1,107 @@
+{% set tz = request.app.state.settings.tz %}
+<section class="deadline-plan" id="deadline-plan" aria-labelledby="deadline-plan-title">
+  <div class="deadline-plan__head">
+    <h2 id="deadline-plan-title">Deadline-Plan</h2>
+    {% if view %}
+    {% set plan = view.plan %}
+    {% if plan.deadline %}
+    <p class="deadline-plan__when">
+      <span class="muted">Anpfiff</span>
+      <time class="num" datetime="{{ plan.deadline.isoformat() }}">{{ plan.deadline | local_time(tz) }}</time>
+      {% if view.matchday %}<span class="muted">· {{ view.matchday }}. Spieltag</span>{% endif %}
+      {% if plan.sell_by %}
+      <span class="muted"> · Verkäufe bis</span>
+      <time class="num" datetime="{{ plan.sell_by.isoformat() }}">{{ plan.sell_by | local_time(tz) }}</time>
+      {% endif %}
+    </p>
+    {% else %}
+    <p class="muted">Nächste Deadline unbekannt.</p>
+    {% endif %}
+    {% endif %}
+  </div>
+
+  {% if error %}
+  <p class="note note--warning">Plan konnte nicht geladen werden. {{ error }}</p>
+  {% elif not view %}
+  <p class="muted">Kader gerade nicht verfügbar – der Plan ist unbekannt.</p>
+  {% endif %}
+
+  {% if view %}
+    {% if view.plan.late_window %}
+    <p class="note note--warning">Verkauf vor Deadline nicht mehr sicher: das Sicherheitsfenster ist bereits abgelaufen.</p>
+    {% endif %}
+    {% if view.plan.deficit_stays_visible %}
+    <p class="note note--danger">Defizit ist nur durch geschützte Stammspieler deckbar – die Verkäufe bleiben offen.</p>
+    {% endif %}
+
+    {% set pos_labels = {1: "Tor", 2: "Abwehr", 3: "Mittelfeld", 4: "Sturm"} %}
+    {% if view.plan.free_slots %}
+    <p class="note note--warning">
+      Der besten Elf fehlen
+      {% for pos, count in view.plan.free_slots.items() %}{{ count }}× {{ pos_labels[pos.value] }}{% if not loop.last %}, {% endif %}{% endfor %}
+      – ein leerer Platz kostet −100 Punkte.
+    </p>
+    {% endif %}
+
+    <dl class="rec__facts">
+      <div><dt>Budget</dt><dd class="num">{{ view.plan.budget | money_short }}</dd></div>
+      <div><dt>Reserviert für Gebote</dt><dd class="num">{{ view.plan.reserved_bids | money_short }}</dd></div>
+    </dl>
+
+    {% if view.plan.sales %}
+    <section class="deadline-plan__sales" aria-labelledby="plan-sales-title">
+      <h3 id="plan-sales-title">Finanzierung</h3>
+      {% if view.plan.sales.best %}
+      <p>
+        <strong>Bester Plan</strong> ({{ view.plan.sales.best.points_lost }} Pkt. weniger):
+        {% for p in view.plan.sales.best.players %}<span class="player-tag">{{ p.name }}</span>{% if not loop.last %}, {% endif %}{% endfor %}
+        für <strong class="num">{{ view.plan.sales.best.total | money_short }}</strong>{% if view.plan.sales.best.covers %}
+        → danach <strong class="num">{{ view.plan.sales.best.surplus | money_short(signed=true) }}</strong> auf dem Konto{% endif %}.
+      </p>
+      {% else %}
+      <p>Mit den geschützten Spielern lässt sich das Minus nicht vollständig decken.</p>
+      <p>
+        <strong>Wenigste Verkäufe</strong>:
+        {% for p in view.plan.sales.fewest.players %}<span class="player-tag">{{ p.name }}</span>{% if not loop.last %}, {% endif %}{% endfor %}
+        für <strong class="num">{{ view.plan.sales.fewest.total | money_short }}</strong>.
+      </p>
+      {% endif %}
+    </section>
+    {% endif %}
+
+    {% if view.plan.protected_players %}
+    <details class="section-details">
+      <summary>{{ view.plan.protected_players | length }} geschützte Stammspieler</summary>
+      <ul class="deadline-plan__players">
+        {% for p in view.plan.protected_players %}
+        <li><a href="/spieler/{{ p.id }}">{{ p.name }}</a> <span class="muted num">{{ p.value | money_short }}</span></li>
+        {% endfor %}
+      </ul>
+    </details>
+    {% endif %}
+
+    {% if view.plan.steps %}
+    <ol class="deadline-plan__steps" aria-label="Zeitplan">
+      {% for step in view.plan.steps %}
+      <li class="deadline-plan__step">
+        <strong class="num"><time datetime="{{ step.at.isoformat() }}">{{ step.at | local_time(tz) }}</time></strong>
+        <span>{{ step.label }}</span>
+        <span class="muted small">{{ step.detail }}</span>
+      </li>
+      {% endfor %}
+    </ol>
+    {% elif not view.plan.late_window and not view.plan.sales and view.plan.deadline %}
+    <p class="muted small">Keine offenen Aufgaben vor der Deadline – nur die Aufstellung am Anpfiff zählt.</p>
+    {% elif not view.plan.deadline %}
+    <p class="muted small">Ohne Deadline fehlt ein Zeitplan; Verkäufe werden auf der Trading-Seite geplant.</p>
+    {% endif %}
+
+    {% if view.plan.notes %}
+    <ul class="deadline-plan__notes muted small">
+      {% for note in view.plan.notes %}<li>{{ note }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+
+    {% if view.stale %}<p class="freshness freshness--stale">Kickbase ist gerade nicht erreichbar – teils ältere Daten.</p>{% endif %}
+  {% endif %}
+</section>

@@ -32,6 +32,7 @@ from app.worker.jobs import (
     collect_league_transfers,
     collect_lineup_predictions,
     collect_lineups,
+    deadline_plan_reminder,
     deadline_warning,
     log_recommendation_snapshot,
     matchday_report,
@@ -100,6 +101,10 @@ async def injuries(runner: JobRunner) -> None:
 
 async def warn_deadline(runner: JobRunner) -> None:
     await runner.run("deadline_warning", deadline_warning)
+
+
+async def deadline_plan(runner: JobRunner) -> None:
+    await runner.run("deadline_plan_reminder", deadline_plan_reminder)
 
 
 async def check_watchlist(runner: JobRunner) -> None:
@@ -222,6 +227,11 @@ def build_scheduler(runner: JobRunner, tz: str) -> AsyncIOScheduler:
     scheduler.add_job(injuries, "cron", hour=9, minute=0, id="collect_injuries", **defaults)
     # Deadline warning: every 30 min it checks whether the lineup deadline is within 2 h.
     scheduler.add_job(warn_deadline, "cron", minute="*/30", id="deadline_warning", **defaults)
+    # Deadline-plan reminder: hourly during the day; the job bails out fast when the deadline
+    # is more than `trading.close_hours` away or there is no open deficit.
+    scheduler.add_job(
+        deadline_plan, "cron", hour="7-23", minute=0, id="deadline_plan_reminder", **defaults
+    )
     # Watchlist: same cadence; active hours only (the worker bails out fast when the watchlist is
     # empty, so the night runs are essentially free).
     scheduler.add_job(

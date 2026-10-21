@@ -40,6 +40,7 @@ def test_schedule():
         "collect_predictions_afternoon",
         "collect_injuries",
         "deadline_warning",
+        "deadline_plan_reminder",
         "notify_watchlist",
         "notify_own_offers",
         "matchday_report",
@@ -62,6 +63,7 @@ def test_schedule():
     assert "hour='23', minute='45'" in jobs["sync_points_evening"]
     assert "hour='7-23', minute='*/30'" in jobs["notify_watchlist"]
     assert "hour='7-23', minute='*/30'" in jobs["notify_own_offers"]
+    assert "hour='7-23', minute='0'" in jobs["deadline_plan_reminder"]
     assert "hour='23', minute='55'" in jobs["matchday_report"]
     assert "hour='7', minute='35'" in jobs["matchday_report_morning"]
 
