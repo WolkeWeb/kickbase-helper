@@ -1,5 +1,6 @@
 import json
 from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
 import httpx
@@ -15,12 +16,16 @@ from app.services.briefing import (
     Briefing,
     BriefingData,
     Fact,
+    _covers,
     _day,
+    _squad_facts,
     collect_briefing_data,
     compose_briefing,
+    line_problem,
     unknown_numbers,
     write_briefing,
 )
+from app.services.today import TodayItem, TodayView
 from app.worker.news_jobs import AI_PAUSE_KEY, BRIEFING_KEY, daily_briefing
 from tests.fakes import (
     TEAM_LEAGUE_ID,
@@ -95,6 +100,7 @@ SOURCE = "Kontostand 3,72 Mio.; Kane 5,6 Mio., Form +20; Musiala −8,3 %"
         ("Form -20", ["-20"]),  # but a sign must match
         ("Musiala −8,3 %", []),
         ("Musiala +8,3 %", ["+8,3"]),
+        ("Form –20", ["–20"]),  # the en dash is a minus as well
     ],
 )
 def test_unknown_numbers(text, unknown):
@@ -140,8 +146,28 @@ async def test_write_briefing_uses_checked_ai_text(sessions):
     [
         # A rising market value is no reason to sell: "verkaufen" isn't in the fact.
         (line("Verkaufe Conté, Marktwert +270 Tsd.", "marktwerte"), "„verkaufen“ ohne Grundlage"),
-        # The day of one offer moved to another offer.
-        (line("Kaufe Goretzka bis morgen 20:26.", "kauf_2"), "Zahlen nicht im Bezug ['20', '26']"),
+        # The time of one offer moved to another offer, or the day of an offer moved.
+        (line("Kaufe Goretzka bis morgen 20:26.", "kauf_2"), "Werte nicht im Bezug ['20:26'"),
+        (line("Kaufe Goretzka, endet morgen 22:59.", "kauf_2"), "['morgen 22:59', 'morgen']"),
+        # Small amounts count too: "6 Mio." is no rounding of "5,6 Mio.".
+        (line("Kaufe Kane für 6 Mio.", "kauf_1"), "Werte nicht im Bezug ['6']"),
+        # Bundled players keep their own values.
+        (
+            line("Kaufen: Kane (4,1 Mio.), Goretzka (5,6 Mio.)", "kauf_1", "kauf_2"),
+            "Werte nicht im Bezug ['4,1']",
+        ),
+        (
+            line("Kaufen: Kane (endet heute 22:59), Goretzka (morgen 20:26)", "kauf_1", "kauf_2"),
+            "Werte nicht im Bezug ['22:59'",
+        ),
+        # A buy fact next to the market values doesn't make Conté a buy.
+        (line("Kaufe Conté (+270 Tsd.)", "kauf_1", "marktwerte"), "„kaufen“ ohne Grundlage"),
+        (line("Conté steigt. Verkaufen!", "kauf_1", "marktwerte"), "„verkaufen“ ohne Grundlage"),
+        # Other words for the same advice.
+        (line("Conté: Gewinn mitnehmen.", "marktwerte"), "„verkaufen“ ohne Grundlage"),
+        (line("Käufe prüfen: Conté.", "marktwerte"), "„kaufen“ ohne Grundlage"),
+        (line("Stell Conté auf.", "marktwerte"), "„aufstellen“ ohne Grundlage"),
+        (line("Conté –270 Tsd.", "marktwerte"), "Werte nicht im Bezug ['–270']"),
         # A player from outside the referenced facts.
         (line("Setze Wirtz statt Goretzka ein.", "kauf_2"), "Spieler nicht im Bezug ['Wirtz']"),
         (line("Kauf Goretzka (Kaufempfehlung 2).", "kauf_7"), "ohne gültigen Bezug"),
@@ -158,6 +184,53 @@ async def test_write_briefing_replaces_lines_that_do_not_match_their_facts(sessi
     referenced = [f.text for f in FACTS if f.id in bad["punkte"]]
     assert list(briefing.lines[1:]) == referenced
     assert problem in briefing.note
+
+
+def test_line_problem_accepts_rephrased_facts():
+    by_id = {f.id: f for f in FACTS}
+
+    def ok(text, *ids):
+        return line_problem(text, [by_id[i] for i in ids], DATA) is None
+
+    assert ok("Aufstellung bis Freitag 20:30 vervollständigen.", "spieltag")
+    assert ok("Kaufen: Kane (5,6 Mio., morgen 20:26), Goretzka (heute 22:59).", "kauf_1", "kauf_2")
+    assert ok("Teamwert seit gestern +1,49 Mio., Conté +270 Tsd.", "marktwerte")
+    assert ok("Musialas Startchance 30 % – nicht aufstellen.", "heute_1")
+    assert not ok("Aufstellung bis Samstag 20:30 vervollständigen.", "spieltag")
+    assert not ok("Alles im Blick.", *by_id)  # citing everything is no summary
+
+
+async def test_write_briefing_genitive_counts_as_naming_the_player(sessions):
+    briefing, _ = await ask(sessions, line("Musialas Startchance 30 % – prüfen.", "heute_1"))
+    assert briefing.lines == ("Musialas Startchance 30 % – prüfen.",)
+    assert "ergänzt" not in briefing.note
+
+
+def test_covers_needs_the_numbers_of_a_fact_without_players():
+    empty = Fact("heute_2", "2 Plätze in der Aufstellung leer", important=True)
+    assert not _covers("Aufstellung ist vollständig.", empty, NAMES)
+    assert _covers("2 Plätze leer – auffüllen.", empty, NAMES)
+    deadline = FACTS[0]
+    assert _covers("Aufstellung bis Fr. 20:30.", deadline, NAMES)
+    assert not _covers("Aufstellung bald fertig machen.", deadline, NAMES)
+
+
+def test_squad_facts_match_names_as_words():
+    def player(pid, name, status):
+        return SimpleNamespace(
+            id=pid, name=name, team_id="2", status=status, status_label=f"S{status}"
+        )
+
+    today = TodayView(
+        now=NOW,
+        deadline=None,
+        matchday=None,
+        items=[TodayItem("warn", "Kimmich: Startchance 50 %")],
+    )
+    squad = [player("1", "Kim", 1), player("2", "Kimmich", 2), player("3", "Fit", 0)]
+    (fact,) = _squad_facts(squad, {}, today, {}, "Europe/Berlin", NOW)
+    # Kimmich is in the "Heute" box already; Kim is not, though "Kim" is part of "Kimmich".
+    assert fact.text == "Nicht fit im Kader: Kim (S1)"
 
 
 async def test_write_briefing_puts_missing_important_facts_first(sessions):
@@ -194,6 +267,7 @@ async def test_write_briefing_falls_back(sessions, answer, note):
         (datetime(2026, 10, 6, 20, 59, tzinfo=UTC), "heute 22:59"),
         (datetime(2026, 10, 6, 22, 30, tzinfo=UTC), "morgen 00:30"),
         (datetime(2026, 10, 9, 18, 30, tzinfo=UTC), "Fr. 9.10. 20:30"),
+        (datetime(2026, 10, 5, 16, 40, tzinfo=UTC), "gestern 18:40"),
     ],
 )
 def test_day_names_today_and_tomorrow(at, text):
@@ -213,6 +287,16 @@ def test_compose_briefing_escapes_and_adds_notes():
     assert lines[2] == "⚠️ Programm &lt;neutral&gt;"
     assert "KI-Text aus den Dashboard-Daten" in lines[3]
     assert '<a href="https://kbh.test/empfehlungen">Empfehlungen öffnen</a>' in lines[3]
+
+
+def test_compose_briefing_cuts_whole_lines_and_keeps_the_footer():
+    many = tuple(f"Punkt {n}: " + "x" * 200 for n in range(40))
+    text = compose_briefing("Liga", Briefing(many, False, ""), ["Hinweis"], "https://kbh.test")
+    lines = text.split("\n")
+    assert len(text) <= 3500
+    assert lines[-3].startswith("… und ") and lines[-3].endswith(" weitere Punkte im Dashboard")
+    assert lines[-2] == "⚠️ Hinweis" and "Empfehlungen öffnen</a>" in lines[-1]
+    assert all(line in many for line in lines[1:-3])
 
 
 async def add_squad_news(sessions, published=NOW, *, updated=None, revision=1):
@@ -307,7 +391,7 @@ async def test_briefing_keeps_original_date_and_identifies_recent_revision(sessi
         data = await collect_briefing_data(client, oldb, sessions, LEAGUE, "Europe/Berlin", NOW)
     news = facts_by_id(data)["meldung_1"].text
     assert "16.9." in news
-    assert "Änderung erkannt 06:40 · Revision 2" in news
+    assert "Änderung erkannt heute 06:40 · Revision 2" in news
 
 
 @pytest.fixture
@@ -453,6 +537,7 @@ async def test_briefing_mentions_minus_only_if_bids_win(sessions):
         ("um 8,3 % gestiegen", "Marktwert 7 Tage: +8.3 %", []),  # English decimal point
         ("für 25,0 Mio.", "Frage: Reicht es für 25 Mio?", []),
         ("fällt 3-4 Wochen aus", "Ausfall: 3-4 Wochen", []),  # a range, no minus
+        ("fällt 3–4 Wochen aus", "Ausfall: 3–4 Wochen", []),
         ("Marktwert 1.234.567 €", "1.234.567", []),
         ("3,7 Mio.", "3,72 Mio.", ["3,7"]),  # rounding is still not allowed
         ("Form -20", "Form +20", ["-20"]),

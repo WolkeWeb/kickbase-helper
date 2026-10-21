@@ -15,11 +15,14 @@ import html
 import json
 import logging
 import re
+import unicodedata
 from collections.abc import Iterable, Sequence
 from contextlib import suppress
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation
+from functools import lru_cache
+from itertools import pairwise
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -36,28 +39,58 @@ from app.news.service import ReportView, reports_for_players
 from app.openligadb.client import OpenLigaDbClient
 from app.services.recommendations import Recommendation, SellView, load_basis, sell_view
 from app.services.today import TodayView, today_view
-from app.web.formatting import local_time, money_short, signed_money
+from app.web.formatting import money_short, signed_money
 
 logger = logging.getLogger(__name__)
 
 TOP = 3
 MAX_LINES = 8
+MESSAGE_LIMIT = 3500  # Telegram allows 4096; cut by whole lines well before
+MORE = "… und {} weitere Punkte im Dashboard"
+# A line citing more facts than this is no summary but a way around the per-line check.
+MAX_FACTS_PER_LINE = 5
 NEWS_DAYS = 7
 # The deadline counts as important for the briefing when it is this close.
 DEADLINE_SOON = timedelta(hours=48)
 WEEKDAYS = ("Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag")
 # Small whole numbers ("2 Spieler", "Top 3") may appear without being in the data.
 FREE_NUMBER_LIMIT = 11
-# Sign included: "−20" in the text must not pass for "+20" in the data. Both the ASCII minus and
-# U+2212 (used by our formatting) count as minus. A sign only counts at the start of a word, so
-# the hyphen in a range like "3-4" is no minus.
-NUMBER = re.compile(r"(?<![\w.,])([+\-\u2212]?)(\d+(?:[.,]\d+)*)")
+# Sign included: "−20" in the text must not pass for "+20" in the data. The ASCII minus, U+2212
+# (used by our formatting) and the en dash (often written by models) count as minus. A sign only
+# counts at the start of a word, so the dash in a range like "3-4" or "3–4" is no minus.
+NUMBER = re.compile(r"(?<![\w.,])([+\-\u2212\u2013]?)(\d+(?:[.,]\d+)*)")
+# Amounts, percentages and scores must match even when small: "6 Mio." is not "5,6 Mio.".
+STRICT_NUMBER = re.compile(
+    r"(?<![\w.,])[+\-\u2212\u2013]?\d+(?:[.,]\d+)*(?=\s*(?:Mio|Tsd|%|€|Punkt|Pkt))"
+    r"|(?<=Score )\d+"
+)
+TIME = re.compile(r"(?<![\d:])(\d{1,2}):(\d{2})(?![\d:])")
+# "heute Morgen" and "Morgen-…" are no day; abbreviations only before a date ("Fr. 9.10.").
+DAY = re.compile(
+    r"(?i:\b(?:heute|übermorgen|gestern|montag|dienstag|mittwoch|donnerstag|freitag|samstag"
+    r"|sonntag)\b|(?<!heute )(?<!am )\bmorgen\b(?!-))"
+    r"|\b(?:Mo|Di|Mi|Do|Fr|Sa|So)\.(?=\s*\d)"
+)
+DAY_TIME = re.compile(
+    "(" + DAY.pattern + r")\s+(?:um\s+)?(?:\d{1,2}\.\d{1,2}\.\s+)?(?:um\s+)?(\d{1,2}):(\d{2})"
+)
+# Clauses of a line; after a dash the clause is still about the players before it.
+CLAUSE = re.compile(r"(;|\n|\.\s+(?=[A-ZÄÖÜ])|\s[–—-]\s)")
+DASHES = frozenset("–—-")
 # A line may only recommend what its facts recommend: a buy only from a buy fact, a sale only
 # from a sell fact, lineup advice only from a lineup fact.
 ACTIONS = {
-    "verkaufen": re.compile(r"verkauf", re.I),
-    "kaufen": re.compile(r"(?<!ver)kauf|gebot|biete", re.I),
-    "aufstellen": re.compile(r"aufstell|\bstelle\b|startelf|\bbank\b|einsetz|\bsetze", re.I),
+    "verkaufen": re.compile(
+        r"verk[aä]uf|abstoß|abgeben|\bloswerd|\bloszuwerd|gewinn\w*\s+mitnehm|zu geld machen",
+        re.I,
+    ),
+    "kaufen": re.compile(r"(?<!ver)k[aä]uf|gebot|biete|\bhol(?:en|e)\b|verpflicht", re.I),
+    "aufstellen": re.compile(
+        r"aufstell|aufgestellt|\bstell\w*\s+(?:\S+\s+){0,3}auf\b|startelf|\bin die elf\b"
+        r"|\bbank\b|einsetz|eingesetzt|\bsetz\w*\s+(?:\S+\s+){0,3}ein\b|nominier|ersetz"
+        r"|spielen lassen",
+        re.I,
+    ),
 }
 LINEUP = frozenset({"aufstellen"})
 # The link of a "Heute" item says which action it is about.
@@ -82,6 +115,8 @@ Regeln:
   verkaufen.
 - Bündle Zusammengehöriges in einer Zeile (z. B. alle Kaufempfehlungen). Lieber weniger Zeilen
   als Füllsätze; ist wenig los, reichen zwei oder drei.
+- Schreib Zahlen und Zeiten direkt hinter den Spieler, zu dem sie gehören; verschiedene
+  Handlungen (kaufen, verkaufen, aufstellen) trennst du mit Semikolon.
 - Deutsch, knapp wie eine Notiz, keine Begrüßung, keine Formatierung (kein Markdown, keine
   Emojis).
 Beispiel für den Stil (Platzhalter in <>):
@@ -152,20 +187,18 @@ def _day(value: datetime, tz: str, now: datetime) -> str:
     """'heute 22:59', 'morgen 20:26', 'Fr. 23.10. 20:30' – the model must not guess the day."""
     zone = ZoneInfo(tz)
     local, today = value.astimezone(zone), now.astimezone(zone).date()
-    if local.date() == today:
-        return f"heute {local:%H:%M}"
-    if local.date() == today + timedelta(days=1):
-        return f"morgen {local:%H:%M}"
+    for offset, word in ((0, "heute"), (1, "morgen"), (-1, "gestern")):
+        if local.date() == today + timedelta(days=offset):
+            return f"{word} {local:%H:%M}"
     return f"{WEEKDAYS[local.weekday()][:2]}. {local.day}.{local.month}. {local:%H:%M}"
 
 
 def _news_text(report: ReportView, tz: str, now: datetime) -> str:
     details = ", ".join(x for x in (report.absence, report.expected_return) if x)
-    when = local_time(report.published_at, tz, now)
+    when = _day(report.published_at, tz, now)
     if report.updated_at:
         when += (
-            f"; Änderung erkannt {local_time(report.updated_at, tz, now)}"
-            f" · Revision {report.revision}"
+            f"; Änderung erkannt {_day(report.updated_at, tz, now)} · Revision {report.revision}"
         )
     text = f"{report.status_label} ({report.kind_label}"
     return text + (f": {details}" if details else "") + f"; kicker {when})"
@@ -272,7 +305,7 @@ def _squad_facts(
         for p in squad
         if m.availability(p.status) is not m.Availability.FIT
         and p.id not in news
-        and p.name not in shown
+        and not _mentions(shown, {p.name})
     ]
     if unfit:
         facts.append(
@@ -330,15 +363,18 @@ async def collect_briefing_data(
         *_sell_facts(sell),
         *_market_value_facts(squad),
     ]
+    # Last names too: the model writes "Kane", not always "Harry Kane".
     names = await _player_names(sessions)
-    names |= {p.name for p in squad}
-    for r in (*today.buys[:TOP], *sell.recommendations[:TOP]):
-        names |= {r.player.name, *r.player.name.split()[-1:]}
+    for name in (
+        *(p.name for p in squad),
+        *(r.player.name for r in (*today.buys[:TOP], *sell.recommendations[:TOP])),
+    ):
+        names |= {name, *name.split()[-1:]}
     return BriefingData(_date(now, tz), tuple(facts), frozenset(names), tuple(basis.all_notes))
 
 
 def _negative(sign: str) -> bool:
-    return sign in ("-", "\u2212")
+    return sign in ("-", "\u2212", "\u2013")
 
 
 def _values(token: str) -> set[Decimal]:
@@ -353,8 +389,8 @@ def _values(token: str) -> set[Decimal]:
     return values
 
 
-def unknown_numbers(text: str, source: str) -> list[str]:
-    """Numbers in `text` that don't occur in `source` (apart from small whole numbers),
+def unknown_numbers(text: str, source: str, *, free: int = FREE_NUMBER_LIMIT) -> list[str]:
+    """Numbers in `text` that don't occur in `source` (apart from whole numbers up to `free`),
     compared by value. An unsigned number may stand for a signed one ("8,3 %" for "+8,3 %"),
     but a sign must match."""
     known = {
@@ -365,7 +401,7 @@ def unknown_numbers(text: str, source: str) -> list[str]:
     any_sign = {value for _, value in known}
     unknown = []
     for sign, token in NUMBER.findall(text):
-        if not sign and token.isdigit() and int(token) <= FREE_NUMBER_LIMIT:
+        if not sign and token.isdigit() and int(token) <= free:
             continue
         values = _values(token)
         if sign:
@@ -377,31 +413,130 @@ def unknown_numbers(text: str, source: str) -> list[str]:
     return unknown
 
 
+def _fold(text: str) -> str:
+    """Without accents and of the same length: "Conté" → "Conte"."""
+    return "".join(unicodedata.normalize("NFKD", c)[0] for c in text)
+
+
+@lru_cache(maxsize=4096)
+def _name_pattern(name: str) -> re.Pattern[str]:
+    # Genitive and apostrophe forms count as the name: "Musialas Startchance", "Kane's".
+    return re.compile(rf"(?<!\w){re.escape(_fold(name))}(?:s|'s|’s|'|’)?(?!\w)")
+
+
 def _mentions(text: str, names: Iterable[str]) -> set[str]:
-    return {n for n in names if re.search(rf"(?<!\w){re.escape(n)}(?!\w)", text)}
+    folded = _fold(text)
+    return {n for n in names if _name_pattern(n).search(folded)}
+
+
+def _spans(text: str, names: Iterable[str]) -> list[tuple[int, str]]:
+    """Start and name of each player named in `text`, in order; a name inside a longer one
+    ("Kane" in "Harry Kane") is the longer one."""
+    folded = _fold(text)
+    found = sorted(
+        (m.start(), -m.end(), n) for n in names for m in _name_pattern(n).finditer(folded)
+    )
+    spans: list[tuple[int, str]] = []
+    end = -1
+    for start, negative_end, name in found:
+        if start >= end:
+            spans.append((start, name))
+            end = -negative_end
+    return spans
+
+
+def _day_key(word: str) -> str:
+    """ "Fr.", "Freitag" and "freitags" are the same day."""
+    word = word.lower().rstrip(".")
+    if word in ("heute", "morgen", "übermorgen", "gestern"):
+        return word
+    return next(day for day in WEEKDAYS if word[:2] == day[:2].lower())
+
+
+def _times(text: str) -> set[tuple[int, int]]:
+    return {(int(h), int(minute)) for h, minute in TIME.findall(text)}
+
+
+def _day_times(text: str) -> set[tuple[str, int, int]]:
+    return {(_day_key(d), int(h), int(minute)) for d, h, minute in DAY_TIME.findall(text)}
+
+
+def _wrong_values(text: str, source: str) -> list[str]:
+    """Numbers, times and days in `text` that `source` doesn't have."""
+    wrong = [f"{h}:{minute:02d}" for h, minute in sorted(_times(text) - _times(source))]
+    wrong += [f"{d} {h}:{m:02d}" for d, h, m in sorted(_day_times(text) - _day_times(source))]
+    # "heute" alone is a common word; with a time it is checked above.
+    days = {_day_key(d) for d in DAY.findall(text)} - {"heute"}
+    wrong += sorted(days - {_day_key(d) for d in DAY.findall(source)})
+    numbers = TIME.sub(" ", text)
+    wrong += unknown_numbers(numbers, source)
+    wrong += unknown_numbers(" ".join(STRICT_NUMBER.findall(numbers)), source, free=-1)
+    return list(dict.fromkeys(wrong))
+
+
+def _actions(facts: Iterable[Fact]) -> set[str]:
+    """Actions these facts allow; context facts like market values allow none."""
+    allowed: set[str] = set()
+    for f in facts:
+        if not f.info_only:
+            allowed |= f.actions | {a for a, pattern in ACTIONS.items() if pattern.search(f.source)}
+    return allowed
 
 
 def line_problem(text: str, facts: Sequence[Fact], data: BriefingData) -> str | None:
-    """Why an AI line doesn't match its facts (None: it does)."""
+    """Why an AI line doesn't match its facts (None: it does).
+
+    Clause by clause: values next to a player only from the facts about him (and those about no
+    player), so bids or times of two players can't swap; an action only if the facts about every
+    player named with it allow it, so "Verkaufe X" needs a sell fact about X."""
     if not facts:
         return f"ohne gültigen Bezug: {text!r}"
-    source = "\n".join([data.date, *(f.source for f in facts)])
-    if unknown := unknown_numbers(text, source):
-        return f"Zahlen nicht im Bezug {unknown[:3]}: {text!r}"
-    if foreign := sorted(_mentions(text, data.names) - _mentions(source, data.names)):
+    if len(facts) > MAX_FACTS_PER_LINE:
+        return f"zu viele Bezüge ({len(facts)}): {text!r}"
+    sources = "\n".join(f.source for f in facts)
+    if foreign := sorted(_mentions(text, data.names) - _mentions(sources, data.names)):
         return f"Spieler nicht im Bezug {foreign[:3]}: {text!r}"
-    allowed = {a for a, pattern in ACTIONS.items() if pattern.search(source)}
-    allowed |= {a for f in facts for a in f.actions}
-    for action, pattern in ACTIONS.items():
-        if action not in allowed and pattern.search(text):
-            return f"„{action}“ ohne Grundlage: {text!r}"
+    about = {f.id: _mentions(f.text, data.names) for f in facts}
+
+    def source_for(who: set[str]) -> str:
+        relevant = [f for f in facts if not who or not about[f.id] or about[f.id] & who]
+        return "\n".join([data.date, *(f.source for f in relevant)])
+
+    def allowed_for(names: set[str]) -> set[str]:
+        return set.intersection(*(_actions(f for f in facts if n in about[f.id]) for n in names))
+
+    in_line = {n for _, n in _spans(text, data.names)}
+    parts = CLAUSE.split(text)
+    named: set[str] = set()
+    for clause, separator in zip(parts[::2], ["", *parts[1::2]], strict=True):
+        spans = _spans(clause, data.names)
+        named = {n for _, n in spans} or (named if separator.strip() in DASHES else set())
+        cuts = [0, *(start for start, _ in spans), len(clause)]
+        for (a, b), who in zip(pairwise(cuts), [named, *({n} for _, n in spans)], strict=True):
+            if wrong := _wrong_values(clause[a:b], source_for(who)):
+                return f"Werte nicht im Bezug {wrong[:3]}: {text!r}"
+        if named:
+            allowed = allowed_for(named)
+        elif in_line:
+            allowed = _actions(f for f in facts if not about[f.id]) | allowed_for(in_line)
+        else:
+            allowed = _actions(facts)
+        for action, pattern in ACTIONS.items():
+            if action not in allowed and pattern.search(clause):
+                return f"„{action}“ ohne Grundlage: {text!r}"
     return None
 
 
 def _covers(text: str, fact: Fact, names: frozenset[str]) -> bool:
-    """A referenced fact about players only counts as mentioned if one of them is named."""
-    about = _mentions(fact.text, names)
-    return not about or bool(_mentions(text, about))
+    """Whether a line that cites `fact` states it: one of its players is named; without players
+    its times, else one of its numbers occur – "Aufstellung vollständig" doesn't state
+    "2 Plätze leer"."""
+    if about := _mentions(fact.text, names):
+        return bool(_mentions(text, about))
+    if times := _times(fact.text):
+        return times <= _times(text)
+    numbers = {v for _, token in NUMBER.findall(fact.text) for v in _values(token)}
+    return not numbers or bool(numbers & {v for _, t in NUMBER.findall(text) for v in _values(t)})
 
 
 @dataclass(frozen=True)
@@ -453,9 +588,20 @@ async def write_briefing(llm: LlmClient, data: BriefingData) -> Briefing:
 def compose_briefing(
     league_name: str, briefing: Briefing, notes: list[str] | tuple[str, ...], link: str
 ) -> str:
-    lines = [f"<b>Briefing {html.escape(league_name)}</b>"]
-    lines += [html.escape(line) for line in briefing.lines]
-    lines += [f"⚠️ {html.escape(note)}" for note in notes]
+    """Telegram HTML; lines beyond the length limit are cut as a whole so notes and the footer
+    with its link stay intact (Telegram cuts at 4096 characters, tags and all)."""
     origin = "KI-Text aus den Dashboard-Daten" if briefing.by_ai else "ohne KI"
-    lines.append(f'<i>{origin}</i> – <a href="{html.escape(link)}">Empfehlungen öffnen</a>')
-    return "\n".join(lines)
+    head = [f"<b>Briefing {html.escape(league_name)}</b>"]
+    tail = [f"⚠️ {html.escape(note)}" for note in notes]
+    tail.append(f'<i>{origin}</i> – <a href="{html.escape(link)}">Empfehlungen öffnen</a>')
+    more = len(MORE.format(len(briefing.lines))) + 1
+    room = MESSAGE_LIMIT - more - sum(len(x) + 1 for x in (*head, *tail))
+    body: list[str] = []
+    for n, line in enumerate(briefing.lines):
+        text = html.escape(line)
+        if len(text) + 1 > room:
+            body.append(MORE.format(len(briefing.lines) - n))
+            break
+        body.append(text)
+        room -= len(text) + 1
+    return "\n".join([*head, *body, *tail])

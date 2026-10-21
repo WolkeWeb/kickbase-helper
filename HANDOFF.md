@@ -12,7 +12,9 @@ Phasen 1–7b und die Erweiterungen bis C20 sind umgesetzt; Details in `docs/roa
 - Morgen-Briefing neu (`app/services/briefing.py`): statt Kader-JSON fertige Fakten mit id
   aus `today_view` (neu: `buys`, optional `basis`), Kaufliste, Verkauf, Meldungen, Teamwert.
   KI-Zeilen nennen ihre Fakten; Zahlen/Spieler/Handlungen werden je Zeile geprüft, sonst
-  Fakten-Satz statt Zeile; ausgelassene wichtige Fakten werden vorangestellt.
+  Fakten-Satz statt Zeile; ausgelassene wichtige Fakten werden vorangestellt. Nach Review:
+  Werte/Handlungen je Spieler (Satzteil), Tag+Uhrzeit exakt, Umlaut-/Synonym-Handlungen,
+  Genitiv-Namen, Gedankenstrich als Minus, Nachricht in ganzen Zeilen auf 3500 Zeichen gekürzt.
 - README überarbeitet: „Auf einen Blick“ (Voraussetzungen, Abgrenzung), Kurzfunktionen,
   Schnellstart früh; Details in `docs/features.md` und `docs/development.md`. Screenshots mit
   prozentualer Breite, damit alle gleich groß rendern.
